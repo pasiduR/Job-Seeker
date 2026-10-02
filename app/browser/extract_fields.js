@@ -7,7 +7,8 @@
   const clean = (text) => (text || "").replace(/\s+/g, " ").trim();
 
   const visible = (el) => {
-    if (el.type === "file") return true; // often hidden behind a styled button
+    // File inputs are often hidden behind a styled button; their container is not.
+    if (el.type === "file") return !el.parentElement || visible(el.parentElement);
     const style = window.getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden") return false;
     return el.getClientRects().length > 0;
@@ -49,8 +50,14 @@
 
   const fields = [];
   const groups = new Map();
+  // Elements tagged by an earlier extraction keep their id, so answers mapped
+  // before new fields appeared still point at the same elements.
   let counter = 0;
-  const nextId = () => `${prefix}${++counter}`;
+  for (const tagged of document.querySelectorAll(`[${TAG}]`)) {
+    const number = Number(tagged.getAttribute(TAG).slice(prefix.length));
+    if (tagged.getAttribute(TAG).startsWith(prefix) && number > counter) counter = number;
+  }
+  const idFor = (el) => el.getAttribute(TAG) || `${prefix}${++counter}`;
 
   const elements = document.querySelectorAll("input, select, textarea");
   for (const el of elements) {
@@ -61,7 +68,7 @@
       const key = `${type}:${el.form ? Array.from(document.forms).indexOf(el.form) : -1}:${el.name}`;
       let group = groups.get(key);
       if (!group) {
-        group = { id: nextId(), type, members: [], el };
+        group = { id: idFor(el), type, members: [], el };
         groups.set(key, group);
         fields.push(group);
       }
@@ -70,7 +77,7 @@
       continue;
     }
 
-    const id = nextId();
+    const id = idFor(el);
     el.setAttribute(TAG, id);
     const label = labelFor(el);
     const role = (el.getAttribute("role") || "").toLowerCase();

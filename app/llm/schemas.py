@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -49,6 +50,23 @@ class FormAnswer(StrictOutput):
 
 class FormMapperOutput(StrictOutput):
     answers: list[FormAnswer]
+
+
+class FormAgentAction(StrictOutput):
+    """One step of the agentic form filler. Values to type never come from here."""
+
+    tool: Literal[
+        "extract_fields",
+        "fill_field",
+        "upload_file",
+        "click_next",
+        "screenshot",
+        "done",
+        "stop",
+    ]
+    field_id: str | None = None
+    button_id: str | None = None
+    reason: str = Field(default="", max_length=500)
 
 
 class ExtractedListing(StrictOutput):

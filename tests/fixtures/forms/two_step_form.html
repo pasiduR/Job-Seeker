@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<body>
+<script>window.submitted = false;</script>
+<form id="application" onsubmit="window.submitted = true; return false;">
+  <section id="step1">
+    <h2>Your details</h2>
+    <label for="first_name">First name *</label>
+    <input id="first_name" name="first_name" required>
+    <label for="email">Email *</label>
+    <input id="email" name="email" type="email" required>
+    <label for="country">Country</label>
+    <select id="country" name="country">
+      <option value="">Select...</option>
+      <option>Sri Lanka</option>
+      <option>India</option>
+    </select>
+    <button type="button" id="next"
+      onclick="document.getElementById('step1').style.display='none';document.getElementById('step2').style.display='block'">Next</button>
+  </section>
+  <section id="step2" style="display:none">
+    <h2>Your application</h2>
+    <label for="resume">Resume *</label>
+    <input id="resume" name="resume" type="file" required>
+    <label for="why">Why do you want to work here?</label>
+    <textarea id="why" name="why"></textarea>
+    <button type="submit" id="submit">Submit application</button>
+  </section>
+</form>
+</body>
+</html>
