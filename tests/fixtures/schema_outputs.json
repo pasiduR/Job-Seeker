@@ -1,0 +1,32 @@
+{
+  "scorer": {
+    "score": 8,
+    "reasons": ["Strong Python background"],
+    "missing_skills": ["Kubernetes"]
+  },
+  "tailor": {
+    "tex": "\\documentclass{article}\\begin{document}CV\\end{document}",
+    "changes": ["Moved Python skill earlier"],
+    "added_skills": [
+      {"skill": "Kubernetes", "est_days": 5, "plan": "Complete a local cluster tutorial"}
+    ]
+  },
+  "form_mapper": {
+    "answers": [
+      {"field_id": "full_name", "value": "Alex Doe", "source": "profile"},
+      {"field_id": "salary", "value": null, "source": "unknown"}
+    ]
+  },
+  "listing_extractor": {
+    "listings": [
+      {
+        "title": "Python Engineer",
+        "company": "Example Co",
+        "url": "/jobs/python-engineer",
+        "description": "Build reliable services.",
+        "location": "Remote",
+        "posted_date": "2026-10-01"
+      }
+    ]
+  }
+}

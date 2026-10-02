@@ -28,7 +28,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### LLM layer
 - [x] `llm/client.py`: a single wrapper that validates output against a Pydantic schema, retries once with the validation error, logs every call to `llm_calls` (tokens, cost, latency, validity), and wraps untrusted text in delimited data blocks
   - Done: `app/llm/client.py`, `tests/test_llm_client.py`, `tests/fixtures/llm_responses.json`, added the validated single-call boundary, one schema retry, bounded transport retries, safe data blocks, and metadata-only call logs.
-- [ ] `llm/schemas.py`: Scorer, Tailor, Form mapper, and Listing extractor schemas
+- [x] `llm/schemas.py`: Scorer, Tailor, Form mapper, and Listing extractor schemas
+  - Done: `app/llm/schemas.py`, `tests/test_llm_schemas.py`, `tests/fixtures/schema_outputs.json`, added strict contracts for scoring, tailoring, form answers, and extracted listings.
 - [ ] Sanitizer that strips instruction-like text from scraped content
 
 ### Sources and scraping
