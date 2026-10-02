@@ -68,7 +68,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/steps/tailor.py`, `tests/test_tailor.py`, `tests/test_cv_checks.py`, wrote tailored PDFs atomically, upserted `cv_versions` with a unified diff vs base, and replaced the job's `skills_to_learn` rows in the same transaction; jobs that skip tailoring reuse the base CV version.
 
 ### Dashboard v1
-- [ ] Web app and API foundation
+- [x] Web app and API foundation
+  - Done: `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/dashboard/templates/`, `app/dashboard/static/style.css`, `app/db/connection.py`, `app/config.py`, `pyproject.toml`, `.env.example`, `tests/test_dashboard_app.py`, added a FastAPI + Jinja2 app factory with HTTP Basic auth from `.env`, same-origin checks on writes, security headers, per-request repositories, and a pooled-connection entry point.
 - [ ] Pages: Sources, Search filters, Base CV + profile editor, Jobs list (status, score, filters), Skills to learn, Run logs, Settings
 - [ ] "Run now" (full pipeline or a single step) and a "Run for this job" button on each job row
 

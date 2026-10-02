@@ -37,6 +37,8 @@ class SecretSettings(BaseSettings):
     telegram_chat_id: SecretStr | None = None
     ntfy_url: str | None = None
     ntfy_token: SecretStr | None = None
+    dashboard_username: str | None = None
+    dashboard_password: SecretStr | None = None
 
 
 class RuntimeSettings(BaseModel):

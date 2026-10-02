@@ -9,15 +9,20 @@ description = "A deterministic job-search and application workflow with narrow L
 requires-python = ">=3.11"
 dependencies = [
     "crawl4ai>=0.7,<0.8",
+    "fastapi>=0.115,<1",
+    "jinja2>=3.1,<4",
     "playwright>=1.55,<2",
     "psycopg[binary,pool]>=3.2,<4",
     "pydantic>=2.11,<3",
     "pydantic-settings>=2.10,<3",
     "python-jobspy>=1.1,<2",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.34,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "httpx>=0.28,<1",
     "pytest>=8.3,<9",
 ]
 
@@ -28,3 +33,7 @@ include = ["app*"]
 addopts = "-p no:cacheprovider"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+"app.dashboard" = ["templates/*.html", "static/*.css"]
+"app.llm" = ["prompts/*.md"]
