@@ -321,7 +321,12 @@ class FormFiller:
         # Element tags may not survive navigation; the agent re-extracts.
         state.fields = {}
         state.filled = set()
-        return {"ok": True, "url": state.page.url, "next": "call extract_fields"}
+        return {
+            "ok": True,
+            "text": button.text,
+            "url": state.page.url,
+            "next": "call extract_fields",
+        }
 
     def _screenshot(self, state: _FillState, tool_input: dict[str, Any]) -> dict[str, Any]:
         name = "final.png" if tool_input.get("final") else f"step_{len(state.trace) + 1:02d}.png"
