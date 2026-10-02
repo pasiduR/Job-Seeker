@@ -2,12 +2,14 @@ import copy
 import json
 from contextlib import contextmanager
 from datetime import datetime
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
 
 from app.queue.postgres import QueueItem
 from app.config import RuntimeSettings
+from app.queue.worker import RetryLater
 from app.sources.models import SourceRepository, SourceType
 from app.sources.types import JobListing
 from app.triggers.watcher import Watcher, enqueue_due
@@ -21,6 +23,8 @@ class WatchConnection:
         self.queue = []
         self.polled = False
         self.fail_enqueue = False
+        self.watched = None
+        self.now = datetime.fromisoformat("2026-10-02T06:00:00+05:30")
 
     @contextmanager
     def transaction(self):
@@ -33,6 +37,10 @@ class WatchConnection:
 
     def execute(self, query, params=None):
         sql = " ".join(query.split())
+        if "SELECT now(), last_watched_at" in sql:
+            return [(self.now, self.watched)]
+        if "UPDATE sources SET last_watched_at" in sql:
+            self.watched = params[0]
         if "SELECT sub.id, sub.polling_interval_minutes" in sql:
             return [(1, 10, self.last, "rss", {})]
         if "SELECT 1 FROM queue_jobs" in sql:
@@ -79,7 +87,7 @@ def test_watcher_saves_and_hands_off_new_matches_atomically(project_root, monkey
             assert hours_old == 1
             return listings
 
-    watcher = Watcher(connection, FixtureDispatcher())
+    watcher = Watcher(connection, FixtureDispatcher(), RuntimeSettings())
     item = QueueItem(1, uuid4(), None, "poll_subscription", {"subscription_id": 1}, 1)
     watcher.poll(item)
     assert connection.jobs and connection.polled
@@ -87,14 +95,35 @@ def test_watcher_saves_and_hands_off_new_matches_atomically(project_root, monkey
     for row in connection.queue:
         assert row[3] == "run_job"
         assert json.loads(row[4])["lane"] == "fast_lane"
+    connection.now += timedelta(minutes=10)
     watcher.poll(item)
     assert len(connection.queue) == len(connection.jobs)
     connection.jobs.clear()
     connection.queue.clear()
     connection.fail_enqueue = True
+    connection.now += timedelta(minutes=10)
     with pytest.raises(RuntimeError, match="queue unavailable"):
         watcher.poll(item)
     assert not connection.jobs and not connection.queue
+
+
+def test_subscriptions_share_source_poll_guard(monkeypatch):
+    connection = WatchConnection()
+    board = source(SourceType.ATS_BOARD, "https://boards.greenhouse.io/acme")
+    monkeypatch.setattr(SourceRepository, "get", lambda self, source_id: board)
+    calls = []
+    class FixtureDispatcher:
+        def fetch(self, *args, **kwargs):
+            calls.append(True)
+            return []
+    watcher = Watcher(connection, FixtureDispatcher(), RuntimeSettings(watcher_ats_min_minutes=5))
+    watcher.poll(QueueItem(1, uuid4(), None, "poll_subscription", {"subscription_id": 1}, 1))
+    with pytest.raises(RetryLater):
+        watcher.poll(QueueItem(2, uuid4(), None, "poll_subscription", {"subscription_id": 2}, 1))
+    assert len(calls) == 1
+    connection.now += timedelta(minutes=5)
+    watcher.poll(QueueItem(2, uuid4(), None, "poll_subscription", {"subscription_id": 2}, 1))
+    assert len(calls) == 2
 
 
 def test_jobspy_watcher_uses_posted_within_hour():

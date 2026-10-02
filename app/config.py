@@ -64,6 +64,7 @@ class RuntimeSettings(BaseModel):
     automation_timezone: str = "Asia/Colombo"
     watcher_jobspy_min_minutes: int = Field(default=15, ge=15, le=30)
     watcher_ats_min_minutes: int = Field(default=5, ge=5, le=10)
+    watcher_other_min_minutes: int = Field(default=1, ge=1)
     source_request_intervals_seconds: dict[str, float] = Field(
         default_factory=lambda: {"*": 2.0, "jobspy": 10.0}
     )

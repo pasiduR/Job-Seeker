@@ -304,14 +304,19 @@ class PipelineTasks:
         # Let queue retry transient poll failures, but record each failed attempt.
         started = perf_counter()
         error = None
+        status = "completed"
         try:
             self._watcher.poll(item)
+        except RetryLater:
+            status = "deferred"
+            raise
         except Exception as exc:
             error = f"Subscription poll failed: {type(exc).__name__}"
+            status = "failed"
             raise
         finally:
             self._store.write_log(run_id=item.run_id, trigger="event", step="watch",
-                                  job_id=None, status="failed" if error else "completed",
+                                  job_id=None, status=status,
                                   duration_ms=max(0, round((perf_counter() - started) * 1000)), error=error)
 
     def review_decision(self, item: QueueItem) -> None:

@@ -161,4 +161,6 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Blocked: self-hosting needs a target VPS and explicit deployment approval; please confirm whether you want this optional service. Existing database logs and dashboard observability work without Langfuse; no dependency added.
 - [x] Preserve queued work while another pipeline holds the run lock; contention must not consume the three failure attempts.
   - Done: queue `defer`, worker `RetryLater`, `PipelineBusy` handling and lock/queue fixture tests; lock contention stays queued without exhausting failure retries; 25 fixture tests passed.
+- [x] Enforce shared watcher polling intervals across subscriptions for the same source.
+  - Done: migration `0007`, watcher source-row polling reservations, deferred poll logs, settings and `tests/test_watcher.py`; subscriptions sharing a source respect the same configured minimum, including after failures; 29 fixture tests passed.
 - [~] Tests for schedule triggering, watcher dedupe, and auto-submit conditions

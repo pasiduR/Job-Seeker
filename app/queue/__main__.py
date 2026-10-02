@@ -139,7 +139,7 @@ def build_tasks(
         store=PostgresWorkerStore(connection),
         finder=SourceFinder(SourceRepository(connection), [PublicSourceCatalog()]),
         dispatcher=dispatcher,
-        watcher=Watcher(connection, dispatcher),
+        watcher=Watcher(connection, dispatcher, settings),
         scraper=ScraperService(PostgresJobStore(connection)),
         base_cv=BaseCVService(
             store=PostgresBaseCVStore(connection), compiler=LatexCompiler()
