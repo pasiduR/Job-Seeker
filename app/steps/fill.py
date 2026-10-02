@@ -60,6 +60,31 @@ class FillConnection(Protocol):
     def transaction(self) -> AbstractContextManager[object]: ...
 
 
+class NotificationQueue(Protocol):
+    def queue(self, *, job_id: int, kind: str, payload: Mapping[str, Any]) -> None: ...
+
+
+class PostgresNotificationQueue:
+    """Adds a pending push notification; ``app.notify`` delivers it."""
+
+    def __init__(self, connection: FillConnection) -> None:
+        self._connection = connection
+
+    def queue(self, *, job_id: int, kind: str, payload: Mapping[str, Any]) -> None:
+        with self._connection.transaction():
+            self._connection.execute(
+                """
+                INSERT INTO notifications (job_id, channel, payload)
+                SELECT %s, 'push', %s
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM notifications
+                    WHERE job_id = %s AND payload->>'kind' = %s
+                )
+                """,
+                (job_id, json.dumps({"kind": kind, **payload}), job_id, kind),
+            )
+
+
 class FormFillStore(Protocol):
     def save_fill(
         self, *, job_id: int, cv_version_id: int, form_url: str, result: FillResult
@@ -127,11 +152,13 @@ class FillService:
         filler: FormFiller,
         store: FormFillStore,
         open_form: OpenForm,
+        notifications: NotificationQueue,
         screenshot_root: Path = SCREENSHOT_ROOT,
     ) -> None:
         self._filler = filler
         self._store = store
         self._open_form = open_form
+        self._notifications = notifications
         self._screenshot_root = screenshot_root
 
     def run(
@@ -144,7 +171,11 @@ class FillService:
     ) -> StepOutcome:
         form_url = application_url(job_url)
         if site_of(form_url) == "linkedin.com":
-            # Never open LinkedIn in automation; the person applies by hand.
+            # Never open LinkedIn in automation (Easy Apply included): notify
+            # so the person applies by hand.
+            self._notifications.queue(
+                job_id=job_id, kind="apply_manually", payload={"url": form_url}
+            )
             return StepOutcome(JobStatus.NEEDS_MANUAL, "LinkedIn job: apply manually")
         if not re.match(r"https?://", form_url):
             return StepOutcome(JobStatus.NEEDS_MANUAL, "job has no http(s) application URL")

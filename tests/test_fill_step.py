@@ -9,7 +9,12 @@ import pytest
 from app.browser.page import PlaywrightFormPage
 from app.queue.state_machine import JobStatus
 from app.steps.base_cv import CVVersion
-from app.steps.fill import FillService, PostgresFormFillStore, application_url
+from app.steps.fill import (
+    FillService,
+    PostgresFormFillStore,
+    PostgresNotificationQueue,
+    application_url,
+)
 from app.steps.form_filler import FillLimits, FormFiller
 from app.steps.form_mapper import FormMapper
 from tests.test_form_filler import AdaptiveLLM
@@ -73,6 +78,7 @@ def service(llm: AdaptiveLLM, connection: RecordingConnection, open_form: Any, t
         filler=FormFiller(llm=llm, mapper=FormMapper(llm=llm, model="m"), model="m", limits=FillLimits()),
         store=PostgresFormFillStore(connection),
         open_form=open_form,
+        notifications=PostgresNotificationQueue(connection),
         screenshot_root=tmp_path / "shots",
     )
 
@@ -147,4 +153,9 @@ def test_linkedin_jobs_are_never_opened(tmp_path: Path, cv: CVVersion) -> None:
     )
 
     assert (outcome.status, outcome.error) == (JobStatus.NEEDS_MANUAL, "LinkedIn job: apply manually")
-    assert connection.queries == []
+    [(query, params)] = connection.queries  # only the notification, no fill rows
+    assert query.startswith("INSERT INTO notifications") and "WHERE NOT EXISTS" in query
+    assert params is not None and params[0] == 9 and params[3] == "apply_manually"
+    assert json.loads(str(params[1])) == {
+        "kind": "apply_manually", "url": "https://www.linkedin.com/jobs/view/123"
+    }

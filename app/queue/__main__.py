@@ -29,7 +29,7 @@ from app.sources.models import SourceRepository
 from app.sources.rss import RemoteBoardSource
 from app.sources.scraper import PostgresJobStore, ScraperService
 from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
-from app.steps.fill import FillService, PostgresFormFillStore
+from app.steps.fill import FillService, PostgresFormFillStore, PostgresNotificationQueue
 from app.steps.form_filler import FillLimits, FormFiller
 from app.steps.form_mapper import FormMapper
 from app.steps.latex import LatexCompiler
@@ -103,6 +103,7 @@ def llm_steps(
             ),
             store=PostgresFormFillStore(connection),
             open_form=lambda url: open_form_page(browser_options(settings), url),
+            notifications=PostgresNotificationQueue(connection),
         ),
     )
 

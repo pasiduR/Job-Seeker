@@ -114,10 +114,11 @@ Goal: filled applications reach the review queue, and I approve them before anyt
   - Done: `app/steps/fill.py`, `app/db/migrations/0002_form_fills.sql`, `app/browser/session.py`, `app/queue/tasks.py`, `app/queue/__main__.py`, `app/triggers/manual.py`, `tests/test_fill_step.py`, `tests/test_worker_tasks.py`, `tests/test_worker_entrypoint.py`, trigger/dashboard/migration tests, added the `fill` pipeline step (tailored -> filled / needs_manual) using the job's tailored CV or the base CV, Lever/Ashby application URLs, a new `form_fills` table (answers, outcome, reason, CV version, final screenshot) and `form_traces` rows replaced on each run; LinkedIn URLs are never opened. "Run now" and "Run for this job" now include `fill`.
 - [x] Separate submit code: requires status `approved`, is guarded by the `applications(job_id)` unique constraint, and respects the batch daily cap
   - Done: `app/steps/submit.py`, `app/db/migrations/0003_application_lanes.sql`, `app/steps/form_filler.py`, `tests/test_submit.py`, `tests/test_migrations.py`, added LLM-free submit: requires `approved`, checks the lane's daily cap (job stays `approved` when reached), reserves the `applications` row first (unique `job_id`, so a second submit is impossible), replays the approved answers and recorded Next clicks on a fresh page, aborts and releases the row if the form changed or a CAPTCHA/login wall appears, and keeps the row with `needs_manual` if anything fails after the submit click. Added `applications.lane` and `screenshot_path`. Queue wiring comes with the Approve task.
-- [~] LinkedIn Easy Apply-only jobs trigger a notification only
+- [x] LinkedIn Easy Apply-only jobs trigger a notification only
+  - Done: `app/steps/fill.py`, `app/queue/__main__.py`, `tests/test_fill_step.py`, LinkedIn jobs (only from alert emails) are never opened: the fill step sets `needs_manual` and queues one pending `apply_manually` row in `notifications` per job; the `notify/` task delivers it.
 
 ### Review and notifications
-- [ ] Review queue page showing the screenshot, filled answers with flagged fields, the CV diff, and Approve / Reject
+- [~] Review queue page showing the screenshot, filled answers with flagged fields, the CV diff, and Approve / Reject
 - [ ] `notify/`: Telegram bot or ntfy push with title, company, score, screenshot link, and Approve / Reject buttons
 - [ ] Approve sends the job to submit right away; Reject sets it to `skipped`
 
