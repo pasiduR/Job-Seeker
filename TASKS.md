@@ -48,7 +48,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/sources/career_page.py`, `app/llm/prompts/listing_extract_v1.md`, `tests/test_career_page.py`, `tests/fixtures/career_page.txt`, added bounded Playwright page reads and schema-validated listing extraction.
 - [x] Scraper service that applies `search_filters` (roles, locations, remote, exclude keywords), dedupes by URL and by (company, title), and saves jobs as `found`
   - Done: `app/sources/scraper.py`, `tests/test_scraper.py`, `tests/fixtures/scraped_jobs.json`, added deterministic filters, canonical URL and company/title dedupe, and idempotent `found` persistence.
-- [ ] Source Finder service that discovers platforms and career pages for the configured source types and saves new ones
+- [x] Source Finder service that discovers platforms and career pages for the configured source types and saves new ones
+  - Done: `app/sources/finder.py`, `tests/test_source_finder.py`, `tests/fixtures/source_candidates.json`, added configured-type discovery, a supported public catalog, typed provider results, and repository-backed dedupe.
 
 ### Scorer
 - [ ] `prompts/scorer_v1.md` and `steps/scorer.py`, which return a 1–10 score with reasons and missing skills; jobs below the threshold become `skipped`

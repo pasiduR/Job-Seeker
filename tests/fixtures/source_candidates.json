@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Example Careers",
+    "type": "career_page",
+    "url": "https://example.com/careers",
+    "config": {"adapter": "career_page"}
+  },
+  {
+    "name": "Example Careers Duplicate",
+    "type": "career_page",
+    "url": "https://EXAMPLE.com/careers/",
+    "config": {"adapter": "career_page"}
+  }
+]
