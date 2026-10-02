@@ -86,6 +86,7 @@ class Watcher:
                 listing = listing.model_copy(update={"url": canonicalize_job_url(listing.url)})
                 job_id = store.save_found_id(source_id, listing)
                 if job_id is not None:
+                    self._connection.execute("UPDATE jobs SET application_lane = 'fast_lane' WHERE id = %s", (job_id,))
                     queue.enqueue(idempotency_key=f"event:job:{job_id}", run_id=uuid4(),
                                   task=RUN_JOB_TASK, job_id=job_id,
                                   payload={"trigger": "event", "lane": "fast_lane", "subscription_id": sub_id})

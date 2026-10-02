@@ -58,6 +58,7 @@ class MemoryWorld:
         job = self.jobs[job_id]
         return WorkerJob(
             id=job_id, description=job["description"], score=job["score"], url=job["url"]
+            , application_lane=job.get("application_lane", "batch"), source_id=job.get("source_id")
         )
 
     def get_profile(self) -> dict[str, Any]:

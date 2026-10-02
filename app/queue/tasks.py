@@ -30,7 +30,7 @@ from app.sources.scraper import ScraperService, SearchFilter
 from app.sources.types import JobListing
 from app.steps.base_cv import BaseCVService, CVVersion
 from app.steps.fill import FillService, application_form_url
-from app.steps.submit import SubmitService
+from app.steps.submit import Lane, SubmitService
 from app.steps.latex import latex_to_text
 from app.steps.scorer import Scorer
 from app.steps.tailor import Tailor, TailorSettings
@@ -63,6 +63,8 @@ class WorkerJob:
     score: int | None
     url: str = ""
     form_url: str = ""
+    application_lane: Lane = "batch"
+    source_id: int | None = None
 
 
 class WorkerStore(Protocol):
@@ -142,7 +144,7 @@ class PostgresWorkerStore:
         rows = self._rows(
             """
             SELECT j.id, j.description, j.score, j.url, j.source_job_id,
-                   s.type, s.url, s.config, s.name
+                   s.type, s.url, s.config, s.name, j.application_lane, j.source_id
             FROM jobs j LEFT JOIN sources s ON s.id = j.source_id
             WHERE j.id = %s
             """,
@@ -162,6 +164,8 @@ class PostgresWorkerStore:
             description=str(row[1]),
             score=row[2],
             url=str(row[3]),
+            application_lane=row[9],
+            source_id=row[10],
             form_url=application_form_url(
                 str(row[3]), source_job_id=row[4], ats=ats
             ),
@@ -493,7 +497,10 @@ class PipelineTasks:
         return PipelineStep(
             "submit",
             frozenset({JobStatus.APPROVED}),
-            lambda job_id: self._submitter.run(
-                job_id=job_id, daily_cap=settings.batch_daily_cap, lane="batch"
-            ),
+            lambda job_id: self._submit_job(job_id, settings),
         )
+
+    def _submit_job(self, job_id: int, settings: RuntimeSettings) -> StepOutcome:
+        lane = self._store.get_job(job_id).application_lane
+        cap = settings.fast_lane_daily_cap if lane == "fast_lane" else settings.batch_daily_cap
+        return self._submitter.run(job_id=job_id, daily_cap=cap, lane=lane)
