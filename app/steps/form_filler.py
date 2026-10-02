@@ -17,6 +17,7 @@ from typing import Any, Protocol
 from app.browser.fields import FormField
 from app.config import RuntimeSettings
 from app.browser.page import FormPage, PageButton
+from app.browser.stop_conditions import find_blocker
 from app.llm.schemas import AnswerSource, FormAgentAction
 from app.steps.form_mapper import RESUME_UPLOAD, FieldAnswer, FormMapper
 
@@ -25,6 +26,7 @@ PROMPT_VERSION = "form_fill_v1"
 PROMPT_PATH = Path(__file__).parents[1] / "llm" / "prompts" / f"{PROMPT_VERSION}.md"
 PAGE_TEXT_CHARS = 3000
 HISTORY_LINES = 10
+MAX_REPEATS = 3
 
 
 class FormAgentClient(Protocol):
@@ -90,6 +92,7 @@ class _FillState:
     cv_text: str
     cv_pdf: Path
     screenshot_dir: Path
+    start_url: str = ""
     pages_visited: int = 1
     fields: dict[str, FormField] = field(default_factory=dict)
     answers: dict[str, FieldAnswer] = field(default_factory=dict)
@@ -98,6 +101,8 @@ class _FillState:
     trace: list[TraceEntry] = field(default_factory=list)
     history: list[str] = field(default_factory=list)
     last_screenshot: str | None = None
+    last_action: tuple[Any, ...] | None = None
+    repeats: int = 0
 
     def answer_for(self, form_field: FormField) -> FieldAnswer | None:
         answer = self.answers.get(form_field.field_id)
@@ -133,11 +138,16 @@ class FormFiller:
         cv_pdf: Path,
         screenshot_dir: Path,
     ) -> FillResult:
-        state = _FillState(job_id, page, profile, cv_text, cv_pdf, screenshot_dir)
+        state = _FillState(
+            job_id, page, profile, cv_text, cv_pdf, screenshot_dir, start_url=page.url
+        )
         try:
+            self._check_page(state)
             self._call_tool(state, "extract_fields", {})
             for step in range(1, self._limits.max_steps + 1):
+                self._check_page(state)
                 action = self._next_action(state, steps_left=self._limits.max_steps - step + 1)
+                self._check_repeats(state, action)
                 if action.tool == "stop":
                     raise StopFilling(f"agent stopped: {action.reason or 'no reason given'}")
                 if action.tool == "done":
@@ -153,6 +163,22 @@ class FormFiller:
             raise StopFilling(f"step limit of {self._limits.max_steps} reached")
         except StopFilling as stop:
             return self._result(state, FillOutcome.NEEDS_MANUAL, str(stop))
+
+    # --- stop conditions --------------------------------------------------------
+
+    def _check_page(self, state: _FillState) -> None:
+        blocker = find_blocker(
+            url=state.page.url, start_url=state.start_url, signals=state.page.signals()
+        )
+        if blocker is not None:
+            raise StopFilling(blocker)
+
+    def _check_repeats(self, state: _FillState, action: FormAgentAction) -> None:
+        key = (action.tool, action.field_id, action.button_id)
+        state.repeats = state.repeats + 1 if key == state.last_action else 1
+        state.last_action = key
+        if state.repeats >= MAX_REPEATS:
+            raise StopFilling(f"same action repeated {MAX_REPEATS} times: {action.tool}")
 
     # --- agent ----------------------------------------------------------------
 
@@ -239,6 +265,8 @@ class FormFiller:
 
     def _extract_fields(self, state: _FillState, _: dict[str, Any]) -> dict[str, Any]:
         current = state.page.fields()
+        if not current:
+            raise StopFilling("unexpected page: no form fields found")
         state.fields = {form_field.field_id: form_field for form_field in current}
         state.filled &= set(state.fields)
         unmapped = [form_field for form_field in current if state.answer_for(form_field) is None]

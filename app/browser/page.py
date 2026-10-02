@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from pydantic import BaseModel, ConfigDict
 
 from app.browser.fields import FormField, extract_fields
+from app.browser.stop_conditions import SIGNALS_SCRIPT, PageSignals
 
 
 BUTTONS_SCRIPT = (Path(__file__).parent / "extract_buttons.js").read_text(encoding="utf-8")
@@ -53,6 +54,8 @@ class FormPage(Protocol):
 
     def buttons(self) -> list[PageButton]: ...
 
+    def signals(self) -> list[PageSignals]: ...
+
     def fill(self, field: FormField, value: str | bool | list[str]) -> None: ...
 
     def upload(self, field: FormField, path: Path) -> None: ...
@@ -85,6 +88,15 @@ class PlaywrightFormPage:
             except Exception:
                 continue
             found.extend(PageButton(**raw, frame=index) for raw in raw_buttons)
+        return found
+
+    def signals(self) -> list[PageSignals]:
+        found: list[PageSignals] = []
+        for frame in self._page.frames:
+            try:
+                found.append(PageSignals(**frame.evaluate(SIGNALS_SCRIPT)))
+            except Exception:
+                continue
         return found
 
     def fill(self, field: FormField, value: str | bool | list[str]) -> None:

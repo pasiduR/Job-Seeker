@@ -176,7 +176,7 @@ def test_values_only_come_from_approved_answers(browser_page: Any, tmp_path: Pat
 
 
 def test_step_limit_ends_in_needs_manual(browser_page: Any, tmp_path: Path) -> None:
-    llm = AdaptiveLLM([("screenshot", None)] * 3)
+    llm = AdaptiveLLM([("screenshot", None), ("extract_fields", None), ("screenshot", None)])
 
     result = run(make_filler(llm, FillLimits(max_steps=3, max_pages=6)), browser_page, tmp_path)
 
@@ -197,3 +197,58 @@ def test_limits_come_from_settings() -> None:
     assert FillLimits.from_settings(RuntimeSettings()) == FillLimits(max_steps=25, max_pages=6)
     custom = RuntimeSettings(form_max_steps=10, form_max_pages=2)
     assert FillLimits.from_settings(custom) == FillLimits(max_steps=10, max_pages=2)
+
+
+def test_same_action_three_times_stops(browser_page: Any, tmp_path: Path) -> None:
+    llm = AdaptiveLLM([("fill_field", "Country")] * 3)
+
+    result = run(make_filler(llm), browser_page, tmp_path)
+
+    assert (result.outcome, result.reason) == (
+        FillOutcome.NEEDS_MANUAL,
+        "same action repeated 3 times: fill_field",
+    )
+    assert [entry.tool for entry in result.trace] == ["extract_fields", "fill_field", "fill_field"]
+
+
+@pytest.mark.parametrize(
+    ("html", "reason"),
+    [
+        (
+            "<form><label for=a>Name</label><input id=a>"
+            "<div class='g-recaptcha' data-sitekey='x'></div></form>",
+            "CAPTCHA detected",
+        ),
+        (
+            "<form><label for=u>Email</label><input id=u type=email>"
+            "<label for=p>Password</label><input id=p type=password></form>",
+            "login wall: the page asks for a password",
+        ),
+        ("<p>This job is no longer available.</p>", "unexpected page: no form fields found"),
+    ],
+)
+def test_blocked_pages_stop_before_the_agent_acts(
+    browser_page: Any, tmp_path: Path, html: str, reason: str
+) -> None:
+    browser_page.set_content(html)
+    llm = AdaptiveLLM([])
+
+    result = run(make_filler(llm), browser_page, tmp_path)
+
+    assert (result.outcome, result.reason) == (FillOutcome.NEEDS_MANUAL, reason)
+    assert llm.agent_inputs == []
+
+
+def test_a_captcha_appearing_mid_form_stops_the_run(browser_page: Any, tmp_path: Path) -> None:
+    browser_page.evaluate(
+        """document.getElementById('next').addEventListener('click', () => {
+            const box = document.createElement('div');
+            box.className = 'h-captcha';
+            document.body.appendChild(box);
+        })"""
+    )
+    llm = AdaptiveLLM([("fill_field", "First name *"), ("click_next", "Next")])
+
+    result = run(make_filler(llm), browser_page, tmp_path)
+
+    assert (result.outcome, result.reason) == (FillOutcome.NEEDS_MANUAL, "CAPTCHA detected")
