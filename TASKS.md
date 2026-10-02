@@ -16,7 +16,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `.env.example`, `.gitignore`, `tests/fixtures/env_example_required_keys.txt`, `tests/test_environment_files.py`, documented secret keys and ignored sensitive runtime artifacts.
 - [x] `config.py`: load `.env` secrets plus the `settings` table, with defaults for threshold, N=7, M=3, placement=`currently_learning`, auto-submit=off, and daily caps
   - Done: `app/config.py`, `tests/test_config.py`, `tests/fixtures/config.env`, `tests/fixtures/settings_table_rows.json`, added separated secret/runtime loading, typed defaults, and settings-table overrides.
-- [ ] Neon DB migrations for every table: `sources`, `search_filters`, `subscriptions`, `schedules`, `jobs`, `cv_versions`, `applications` (unique `job_id`), `skills_to_learn`, `profile`, `queue_jobs`, `notifications`, `run_logs`, `settings`, `llm_calls`, `form_traces`
+- [x] Neon DB migrations for every table: `sources`, `search_filters`, `subscriptions`, `schedules`, `jobs`, `cv_versions`, `applications` (unique `job_id`), `skills_to_learn`, `profile`, `queue_jobs`, `notifications`, `run_logs`, `settings`, `llm_calls`, `form_traces`
+  - Done: `app/db/migrations/0001_initial.sql`, `app/db/migrate.py`, `tests/test_migrations.py`, `tests/fixtures/required_tables.txt`, added the complete relational schema and an idempotent transactional migration runner.
 - [ ] Job status state machine (`found → scored → tailored → filled → approved → submitted` / `skipped` / `failed` / `needs_manual`) with one function per transition
 - [ ] Postgres-backed queue, worker, and `pipeline_runner` with locking so runs never overlap or repeat, plus `run_logs` entries
 - [ ] Shared HTTP helper with timeout, retry with backoff (max 3), and per-source rate limiting
