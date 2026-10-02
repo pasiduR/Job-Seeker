@@ -1,0 +1,13 @@
+From: LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>
+To: seeker@example.com
+Subject: New Python jobs for you
+Date: Thu, 01 Oct 2026 05:00:00 +0000
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+
+<html><body>
+  <a href="https://www.linkedin.com/jobs/view/123456/?trackingId=abc">Python Engineer</a>
+  <a href="https://www.linkedin.com/comm/jobs/view/123456?trk=email">Duplicate link</a>
+  <a href="https://www.linkedin.com/jobs/view/789012?refId=def">Backend Engineer</a>
+  <a href="https://example.com/not-a-linkedin-job">Ignore this</a>
+</body></html>
