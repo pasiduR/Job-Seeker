@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<body>
+<h1>Backend Engineer</h1>
+<form id="application">
+  <label for="first_name">First Name *</label>
+  <input id="first_name" name="first_name" type="text" aria-required="true">
+
+  <label>Email <input id="email" name="email" type="email" required></label>
+
+  <label for="phone">Phone</label>
+  <input id="phone" name="phone" type="tel" placeholder="+1 555 0100">
+
+  <span id="resume-label">Resume/CV</span>
+  <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx" aria-labelledby="resume-label" required style="display:none">
+
+  <label for="cover">Why do you want to work here?</label>
+  <textarea id="cover" name="cover"></textarea>
+
+  <label for="country">Country *</label>
+  <select id="country" name="country">
+    <option value="">Select...</option>
+    <option>Sri Lanka</option>
+    <option>United Kingdom</option>
+  </select>
+
+  <fieldset>
+    <legend>Are you legally authorized to work in the UK? *</legend>
+    <label><input type="radio" name="work_auth" value="yes"> Yes</label>
+    <label><input type="radio" name="work_auth" value="no"> No</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Which stacks have you used?</legend>
+    <label><input type="checkbox" name="stacks" value="py"> Python</label>
+    <label><input type="checkbox" name="stacks" value="go"> Go</label>
+  </fieldset>
+
+  <label><input type="checkbox" name="privacy" required> I agree to the privacy notice</label>
+
+  <input aria-label="Location (city)" role="combobox" id="location" name="location">
+
+  <input type="hidden" name="csrf" value="x">
+  <input type="text" name="honeypot" style="display:none">
+  <input type="text" name="disabled_field" disabled>
+  <button type="submit">Submit application</button>
+</form>
+</body>
+</html>

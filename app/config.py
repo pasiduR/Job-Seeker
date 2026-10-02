@@ -71,6 +71,9 @@ class RuntimeSettings(BaseModel):
     llm_output_usd_per_mtok: float = Field(default=15.0, ge=0)
     llm_max_tokens: int = Field(default=16000, ge=1)
     llm_timeout_seconds: float = Field(default=120.0, gt=0)
+    # Headed by default so CAPTCHAs and logins can be handled by hand.
+    browser_headless: bool = False
+    browser_timeout_seconds: float = Field(default=30.0, gt=0)
 
 
 class AppConfig(BaseModel):

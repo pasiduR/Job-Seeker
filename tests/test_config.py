@@ -70,3 +70,5 @@ def test_load_config_supplies_safe_runtime_defaults(project_root: Path) -> None:
     assert config.settings.llm_model == "claude-sonnet-4-6"
     assert config.settings.llm_input_usd_per_mtok == 3.0
     assert config.settings.llm_output_usd_per_mtok == 15.0
+    assert config.settings.browser_headless is False
+    assert config.settings.browser_timeout_seconds == 30.0
