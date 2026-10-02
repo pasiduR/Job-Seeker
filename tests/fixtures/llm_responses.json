@@ -1,0 +1,4 @@
+{
+  "invalid": "{\"score\": 11, \"reasons\": []}",
+  "valid": "{\"score\": 8, \"reasons\": [\"Strong Python match\"]}"
+}
