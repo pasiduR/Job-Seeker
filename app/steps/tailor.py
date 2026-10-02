@@ -6,17 +6,23 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 
-from app.llm.schemas import TailorOutput
+from app.llm.schemas import AddedSkill, TailorOutput
 from app.queue.state_machine import JobStatus
 from app.steps.base_cv import CVVersion
+from app.steps.cv_checks import (
+    SkillPlacement,
+    apply_skill_placement,
+    find_invented_entities,
+    find_unsafe_commands,
+    limit_added_skills,
+    placement_terms,
+)
 
 
 PROMPT_VERSION = "tailor_v1"
 PROMPT_PATH = Path(__file__).parents[1] / "llm" / "prompts" / f"{PROMPT_VERSION}.md"
-
-SkillPlacement = Literal["skills_section", "currently_learning"]
 
 
 class TailorClient(Protocol):
@@ -46,6 +52,10 @@ class TailorDecision:
     status: JobStatus
     used_base: bool
     output: TailorOutput | None = None
+    tex: str | None = None
+    added_skills: tuple[AddedSkill, ...] = ()
+    dropped_skills: tuple[str, ...] = ()
+    error: str | None = None
 
 
 class Tailor:
@@ -83,6 +93,47 @@ class Tailor:
                 ),
             },
         )
-        return TailorDecision(
-            status=JobStatus.TAILORED, used_base=False, output=output
-        )
+        return _check_output(output, base_cv.tex, settings)
+
+
+def _check_output(
+    output: TailorOutput, base_tex: str, settings: TailorSettings
+) -> TailorDecision:
+    """Enforce the tailoring rules in code, whatever the prompt produced."""
+
+    unsafe = find_unsafe_commands(base_tex, output.tex)
+    if unsafe:
+        return _rejected(output, "unsafe LaTeX commands: " + ", ".join(unsafe))
+    invented = find_invented_entities(base_tex, output.tex)
+    if invented:
+        return _rejected(output, "invented entities: " + "; ".join(invented))
+
+    limited = limit_added_skills(
+        output.added_skills,
+        base_tex=base_tex,
+        max_days=settings.max_skill_days,
+        max_count=settings.max_added_skills,
+    )
+    tex = apply_skill_placement(output.tex, limited.kept, settings.placement)
+    leaked = find_invented_entities(
+        base_tex, tex, allowed_terms=placement_terms(limited.kept, settings.placement)
+    )
+    if leaked:
+        return _rejected(output, "invented entities: " + "; ".join(leaked))
+    return TailorDecision(
+        status=JobStatus.TAILORED,
+        used_base=False,
+        output=output,
+        tex=tex,
+        added_skills=tuple(limited.kept),
+        dropped_skills=tuple(limited.dropped),
+    )
+
+
+def _rejected(output: TailorOutput, reason: str) -> TailorDecision:
+    return TailorDecision(
+        status=JobStatus.FAILED,
+        used_base=False,
+        output=output,
+        error=f"Tailored CV rejected: {reason}",
+    )
