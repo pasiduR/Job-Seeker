@@ -62,7 +62,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/llm/prompts/tailor_v1.md`, `app/steps/tailor.py`, `app/config.py`, `tests/test_tailor.py`, `tests/test_config.py`, `tests/fixtures/job_backend_python.txt`, `tests/fixtures/tailor_outputs.json`, added the tailor prompt and step; tailoring is skipped (base PDF used) when the job score is at or above the new `tailor_skip_threshold` setting (default 9), because reusing `score_threshold` would skip every job that passes scoring.
 - [x] Code checks: reject output if it adds new employers, projects, degrees, dates, or metrics (entity diff); enforce the `added_skills` limits (≤ M, `est_days` ≤ N); apply the placement toggle
   - Done: `app/steps/cv_checks.py`, `app/steps/tailor.py`, `tests/test_cv_checks.py`, added entity diffs for names, degrees, dates, and numbers, rejection of file/shell LaTeX commands, skill limit enforcement, and code-applied `currently_learning` / `skills_section` placement.
-- [ ] Compile with `tectonic` or `pdflatex`; on error make one LLM fix attempt, then mark the job `failed`
+- [x] Compile with `tectonic` or `pdflatex`; on error make one LLM fix attempt, then mark the job `failed`
+  - Done: `app/steps/tailor.py`, `app/llm/schemas.py`, `app/llm/prompts/latex_fix_v1.md`, `tests/test_tailor.py`, `tests/test_cv_checks.py`, compiled tailored CVs through the shared compiler with one schema-validated `latex_fix_v1` attempt, re-checked the fix for invented or unsafe content, and failed the job on a second error.
 - [ ] Save the result to `cv_versions` (tex, pdf path, diff vs base) and `skills_to_learn`
 
 ### Dashboard v1

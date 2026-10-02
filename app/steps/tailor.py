@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypeVar
 
-from app.llm.schemas import AddedSkill, TailorOutput
+from pydantic import BaseModel
+
+from app.llm.schemas import AddedSkill, LatexFixOutput, TailorOutput
 from app.queue.state_machine import JobStatus
-from app.steps.base_cv import CVVersion
+from app.steps.base_cv import CVVersion, PdfCompiler
 from app.steps.cv_checks import (
     SkillPlacement,
     apply_skill_placement,
@@ -19,24 +21,31 @@ from app.steps.cv_checks import (
     limit_added_skills,
     placement_terms,
 )
+from app.steps.latex import LatexCompileError
 
 
 PROMPT_VERSION = "tailor_v1"
 PROMPT_PATH = Path(__file__).parents[1] / "llm" / "prompts" / f"{PROMPT_VERSION}.md"
+FIX_PROMPT_VERSION = "latex_fix_v1"
+FIX_PROMPT_PATH = (
+    Path(__file__).parents[1] / "llm" / "prompts" / f"{FIX_PROMPT_VERSION}.md"
+)
+
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
 class TailorClient(Protocol):
     def generate(
         self,
         *,
-        schema: type[TailorOutput],
+        schema: type[SchemaT],
         job_id: int | None,
         step: str,
         prompt_version: str,
         model: str,
         prompt: str,
         untrusted_data: Mapping[str, str],
-    ) -> TailorOutput: ...
+    ) -> SchemaT: ...
 
 
 @dataclass(frozen=True)
@@ -53,14 +62,18 @@ class TailorDecision:
     used_base: bool
     output: TailorOutput | None = None
     tex: str | None = None
+    pdf: bytes | None = None
     added_skills: tuple[AddedSkill, ...] = ()
     dropped_skills: tuple[str, ...] = ()
     error: str | None = None
 
 
 class Tailor:
-    def __init__(self, *, llm: TailorClient, model: str) -> None:
+    def __init__(
+        self, *, llm: TailorClient, compiler: PdfCompiler, model: str
+    ) -> None:
         self._llm = llm
+        self._compiler = compiler
         self._model = model
 
     def run(
@@ -93,7 +106,51 @@ class Tailor:
                 ),
             },
         )
-        return _check_output(output, base_cv.tex, settings)
+        decision = _check_output(output, base_cv.tex, settings)
+        if decision.status == JobStatus.FAILED or decision.tex is None:
+            return decision
+        return self._compile_with_one_fix(job_id, base_cv.tex, decision, settings)
+
+    def _compile_with_one_fix(
+        self,
+        job_id: int,
+        base_tex: str,
+        decision: TailorDecision,
+        settings: TailorSettings,
+    ) -> TailorDecision:
+        assert decision.tex is not None
+        try:
+            return replace(decision, pdf=self._compiler.compile(decision.tex))
+        except LatexCompileError as first_error:
+            fix = self._llm.generate(
+                schema=LatexFixOutput,
+                job_id=job_id,
+                step="tailor_fix",
+                prompt_version=FIX_PROMPT_VERSION,
+                model=self._model,
+                prompt=FIX_PROMPT_PATH.read_text(encoding="utf-8"),
+                untrusted_data={
+                    "tex": decision.tex,
+                    "compile_log": first_error.log or str(first_error),
+                },
+            )
+
+        problems = find_unsafe_commands(base_tex, fix.tex) + find_invented_entities(
+            base_tex,
+            fix.tex,
+            allowed_terms=placement_terms(decision.added_skills, settings.placement),
+        )
+        if problems:
+            return _failed(
+                decision, "LaTeX fix rejected: " + "; ".join(problems)
+            )
+        try:
+            pdf = self._compiler.compile(fix.tex)
+        except LatexCompileError as second_error:
+            return _failed(
+                decision, f"LaTeX compile failed after one fix: {second_error}"
+            )
+        return replace(decision, tex=fix.tex, pdf=pdf)
 
 
 def _check_output(
@@ -137,3 +194,7 @@ def _rejected(output: TailorOutput, reason: str) -> TailorDecision:
         output=output,
         error=f"Tailored CV rejected: {reason}",
     )
+
+
+def _failed(decision: TailorDecision, error: str) -> TailorDecision:
+    return replace(decision, status=JobStatus.FAILED, tex=None, pdf=None, error=error)

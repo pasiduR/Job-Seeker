@@ -4,10 +4,11 @@ from typing import Any
 
 import pytest
 
-from app.llm.schemas import TailorOutput
+from app.llm.schemas import LatexFixOutput, TailorOutput
 from app.queue.state_machine import JobStatus
 from app.steps.base_cv import CVVersion
-from app.steps.tailor import PROMPT_VERSION, Tailor, TailorSettings
+from app.steps.latex import LatexCompileError
+from app.steps.tailor import FIX_PROMPT_VERSION, PROMPT_VERSION, Tailor, TailorSettings
 
 
 SETTINGS = TailorSettings(
@@ -16,6 +17,21 @@ SETTINGS = TailorSettings(
     max_added_skills=3,
     placement="currently_learning",
 )
+
+
+class FixtureCompiler:
+    """Returns PDF bytes, or raises the queued compile errors in order."""
+
+    def __init__(self, *results: bytes | Exception) -> None:
+        self.results = list(results) or [b"%PDF-1.7 tailored"]
+        self.compiled: list[str] = []
+
+    def compile(self, tex: str) -> bytes:
+        self.compiled.append(tex)
+        result = self.results.pop(0) if len(self.results) > 1 else self.results[0]
+        if isinstance(result, Exception):
+            raise result
+        return result
 
 
 class FixtureTailorClient:
@@ -61,7 +77,7 @@ def test_tailor_skips_llm_when_base_cv_already_fits(
     base_cv: CVVersion, job_description: str
 ) -> None:
     client = FixtureTailorClient([])
-    decision = Tailor(llm=client, model="fixture").run(
+    decision = Tailor(llm=client, compiler=FixtureCompiler(), model="fixture").run(
         job_id=5,
         job_description=job_description,
         job_score=9,
@@ -80,7 +96,7 @@ def test_tailor_calls_llm_with_versioned_prompt_and_limits(
     output = tailor_output(project_root, base_cv.tex, "reordered")
     client = FixtureTailorClient([output])
 
-    decision = Tailor(llm=client, model="fixture").run(
+    decision = Tailor(llm=client, compiler=FixtureCompiler(), model="fixture").run(
         job_id=5,
         job_description=job_description,
         job_score=7,
@@ -98,3 +114,79 @@ def test_tailor_calls_llm_with_versioned_prompt_and_limits(
         "max_skill_days": 7,
         "max_added_skills": 3,
     }
+
+
+def run_with_compiler(
+    project_root: Path,
+    base_cv: CVVersion,
+    compiler: FixtureCompiler,
+    fixes: list[str],
+) -> tuple[Any, FixtureTailorClient]:
+    output = tailor_output(project_root, base_cv.tex, "reordered")
+    client = FixtureTailorClient([output, *(LatexFixOutput(tex=tex) for tex in fixes)])
+    decision = Tailor(llm=client, compiler=compiler, model="fixture").run(
+        job_id=5,
+        job_description="Backend role",
+        job_score=7,
+        base_cv=base_cv,
+        settings=SETTINGS,
+    )
+    return decision, client
+
+
+def test_tailor_compiles_tailored_cv(project_root: Path, base_cv: CVVersion) -> None:
+    compiler = FixtureCompiler()
+    decision, client = run_with_compiler(project_root, base_cv, compiler, [])
+
+    assert decision.status == JobStatus.TAILORED
+    assert decision.pdf == b"%PDF-1.7 tailored"
+    assert compiler.compiled == [decision.tex]
+    assert len(client.calls) == 1
+
+
+def test_tailor_makes_one_llm_fix_attempt(project_root: Path, base_cv: CVVersion) -> None:
+    compiler = FixtureCompiler(
+        LatexCompileError("pdflatex exited with status 1", "! Missing } inserted."),
+        b"%PDF-1.7 fixed",
+    )
+    fixed_tex = base_cv.tex.replace("Linux", "Linux, Redis")
+
+    decision, client = run_with_compiler(project_root, base_cv, compiler, [fixed_tex])
+
+    assert decision.status == JobStatus.TAILORED
+    assert decision.pdf == b"%PDF-1.7 fixed"
+    assert decision.tex == fixed_tex
+    fix_call = client.calls[1]
+    assert fix_call["step"] == "tailor_fix"
+    assert fix_call["prompt_version"] == FIX_PROMPT_VERSION
+    assert fix_call["schema"] is LatexFixOutput
+    assert "Missing }" in fix_call["untrusted_data"]["compile_log"]
+
+
+def test_tailor_fails_after_second_compile_error(
+    project_root: Path, base_cv: CVVersion
+) -> None:
+    compiler = FixtureCompiler(LatexCompileError("pdflatex exited with status 1", "! bad"))
+
+    decision, client = run_with_compiler(project_root, base_cv, compiler, [base_cv.tex])
+
+    assert decision.status == JobStatus.FAILED
+    assert decision.pdf is None
+    assert decision.error is not None
+    assert "after one fix" in decision.error
+    assert len(compiler.compiled) == 2
+    assert len(client.calls) == 2
+
+
+def test_tailor_rejects_fix_that_invents_content(
+    project_root: Path, base_cv: CVVersion
+) -> None:
+    compiler = FixtureCompiler(LatexCompileError("failed", "! bad"))
+    invented = base_cv.tex.replace("Contoso Health", "Initech")
+
+    decision, _ = run_with_compiler(project_root, base_cv, compiler, [invented])
+
+    assert decision.status == JobStatus.FAILED
+    assert decision.error is not None
+    assert "Initech" in decision.error
+    assert len(compiler.compiled) == 1

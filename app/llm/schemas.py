@@ -30,6 +30,10 @@ class TailorOutput(StrictOutput):
     added_skills: list[AddedSkill]
 
 
+class LatexFixOutput(StrictOutput):
+    tex: str
+
+
 class AnswerSource(StrEnum):
     PROFILE = "profile"
     CV = "cv"

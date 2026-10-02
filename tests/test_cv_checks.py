@@ -13,7 +13,7 @@ from app.steps.cv_checks import (
 )
 from app.steps.latex import latex_to_text
 from app.steps.tailor import Tailor, TailorSettings
-from tests.test_tailor import FixtureTailorClient, tailor_output
+from tests.test_tailor import FixtureCompiler, FixtureTailorClient, tailor_output
 
 
 @pytest.fixture
@@ -32,7 +32,9 @@ def settings(placement: str = "currently_learning") -> TailorSettings:
 
 def run_case(project_root: Path, base_tex: str, case: str, placement: str = "currently_learning"):
     output = tailor_output(project_root, base_tex, case)
-    return Tailor(llm=FixtureTailorClient([output]), model="fixture").run(
+    return Tailor(
+        llm=FixtureTailorClient([output]), compiler=FixtureCompiler(), model="fixture"
+    ).run(
         job_id=3,
         job_description="Backend role",
         job_score=6,
