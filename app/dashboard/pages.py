@@ -61,6 +61,38 @@ def _validation_message(exc: ValidationError) -> str:
 # --- Sources -----------------------------------------------------------------
 
 
+@router.get("/schedules", response_class=HTMLResponse)
+def schedules_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    settings = RuntimeSettings.model_validate(repos.store.read_settings())
+    return _render(request, "schedules.html", schedules=repos.store.list_schedules(),
+                   pipeline_steps=PIPELINE_STEPS, timezone=settings.automation_timezone)
+
+
+@router.post("/schedules")
+def create_schedule(name: str = Form(...), cron_expression: str = Form(...),
+                    pipeline_step: str = Form("all"), repos: DashboardRepos = Depends(get_repos)) -> Response:
+    from app.triggers.scheduler import ScheduleCreate
+    try:
+        values = ScheduleCreate(name=name, cron_expression=cron_expression,
+                                pipeline_step=None if pipeline_step == "all" else pipeline_step)
+    except ValidationError as exc:
+        return _redirect("/schedules", error=_validation_message(exc))
+    created = repos.store.create_schedule(values)
+    return _redirect("/schedules", message="Schedule added" if created else "Schedule name already exists")
+
+
+@router.post("/schedules/{schedule_id}/active")
+def set_schedule_active(schedule_id: int, active: bool = Form(...), repos: DashboardRepos = Depends(get_repos)) -> Response:
+    changed = repos.store.set_schedule_active(schedule_id, active)
+    return _redirect("/schedules", message="Schedule updated" if changed else "Schedule not found")
+
+
+@router.post("/schedules/{schedule_id}/delete")
+def delete_schedule(schedule_id: int, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    changed = repos.store.delete_schedule(schedule_id)
+    return _redirect("/schedules", message="Schedule removed" if changed else "Schedule not found")
+
+
 @router.get("/sources", response_class=HTMLResponse)
 def sources_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
     return _render(

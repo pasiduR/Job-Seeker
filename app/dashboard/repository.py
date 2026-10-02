@@ -16,6 +16,7 @@ from app.sources.models import Source, SourceCreate, SourceRepository, SourceUpd
 from app.steps.base_cv import BaseCVService, CVVersion, PostgresBaseCVStore
 from app.triggers.manual import ManualTrigger
 from app.triggers.review import ReviewDecisions
+from app.triggers.scheduler import ScheduleCreate
 
 
 class SearchFilterCreate(BaseModel):
@@ -99,6 +100,14 @@ class RunLogRow:
 
 
 class DashboardStore(Protocol):
+    def list_schedules(self) -> list[dict[str, Any]]: ...
+
+    def create_schedule(self, values: ScheduleCreate) -> bool: ...
+
+    def set_schedule_active(self, schedule_id: int, active: bool) -> bool: ...
+
+    def delete_schedule(self, schedule_id: int) -> bool: ...
+
     def list_sources(self) -> list[Source]: ...
 
     def create_source(self, values: SourceCreate) -> tuple[Source, bool]: ...
@@ -176,6 +185,26 @@ class PostgresDashboardStore:
 
     def list_sources(self) -> list[Source]:
         return self._sources.list()
+
+    def list_schedules(self) -> list[dict[str, Any]]:
+        columns = ("id", "name", "cron_expression", "pipeline_step", "active", "last_enqueued_at")
+        return [dict(zip(columns, row)) for row in self._rows(
+            "SELECT id, name, cron_expression, pipeline_step, active, last_enqueued_at FROM schedules ORDER BY id"
+        )]
+
+    def create_schedule(self, values: ScheduleCreate) -> bool:
+        return self._changed(
+            "INSERT INTO schedules (name, cron_expression, pipeline_step) VALUES (%s, %s, %s) ON CONFLICT (name) DO NOTHING RETURNING id",
+            (values.name, values.cron_expression, values.pipeline_step),
+        )
+
+    def set_schedule_active(self, schedule_id: int, active: bool) -> bool:
+        return self._changed(
+            "UPDATE schedules SET active = %s, updated_at = now() WHERE id = %s RETURNING id", (active, schedule_id)
+        )
+
+    def delete_schedule(self, schedule_id: int) -> bool:
+        return self._changed("DELETE FROM schedules WHERE id = %s RETURNING id", (schedule_id,))
 
     def create_source(self, values: SourceCreate) -> tuple[Source, bool]:
         return self._sources.create(values)

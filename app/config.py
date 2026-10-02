@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,6 +59,7 @@ class RuntimeSettings(BaseModel):
         "currently_learning"
     )
     auto_submit: bool = False
+    automation_timezone: str = "Asia/Colombo"
     batch_daily_cap: int = Field(default=10, ge=0)
     jobspy_results_wanted: int = Field(default=20, ge=1)
     source_finder_types: list[
@@ -78,6 +79,16 @@ class RuntimeSettings(BaseModel):
     dashboard_url: str = ""
     form_max_steps: int = Field(default=25, ge=1)
     form_max_pages: int = Field(default=6, ge=1)
+
+    @field_validator("automation_timezone")
+    @classmethod
+    def valid_timezone(cls, value: str) -> str:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError("Unknown IANA timezone") from exc
+        return value
 
 
 class AppConfig(BaseModel):

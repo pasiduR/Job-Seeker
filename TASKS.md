@@ -139,7 +139,8 @@ Goal: filled applications reach the review queue, and I approve them before anyt
 ## Phase 3 — Automation: schedules, watcher, fast lane
 Goal: the pipeline runs on its own and reacts to new jobs within minutes.
 
-- [ ] Schedules page and `schedules` table; the scheduler adds cron-style runs to the queue (for example, a daily full run at 06:00)
+- [x] Schedules page and `schedules` table; the scheduler adds cron-style runs to the queue (for example, a daily full run at 06:00)
+  - Done: `app/triggers/scheduler.py`, `app/config.py`, dashboard repository/pages/templates, `tests/test_scheduler.py`, `tests/fixtures/schedules.json`; validated numeric cron, timezone-aware matching, atomic queue/cursor writes and dashboard CRUD; 34 fixture tests passed.
 - [ ] VPS deployment: systemd units or timers for the scheduler, the worker, and the watcher
 - [ ] Subscriptions page (source, search filter, polling interval with a 10 min default)
 - [ ] Watcher detection for each source: alert emails, jobspy with a "posted within the last hour" filter every 15–30 min, ATS JSON APIs every 5–10 min, and RSS polling; a new match starts that job's pipeline right away
