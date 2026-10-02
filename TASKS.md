@@ -165,4 +165,5 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: migration `0007`, watcher source-row polling reservations, deferred poll logs, settings and `tests/test_watcher.py`; subscriptions sharing a source respect the same configured minimum, including after failures; 29 fixture tests passed.
 - [x] Tests for schedule triggering, watcher dedupe, and auto-submit conditions
   - Done: expanded scheduler, watcher and auto-submit fixture tests; updated ATS store rows for lane columns; full offline suite passed: 315 tests, no skips. One existing pytest configuration warning remains.
-- [~] Include SQL migrations in installed packages and declare timezone data for Windows automation.
+- [x] Include SQL migrations in installed packages and declare timezone data for Windows automation.
+  - Done: `pyproject.toml`, `tests/test_installed_package.py`; a locally built wheel contains all SQL migrations and browser/dashboard/prompt assets, and Windows timezone data is declared; 17 packaging/migration/scheduler tests passed without downloads.
