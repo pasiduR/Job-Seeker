@@ -20,7 +20,13 @@ class FakeSettingsConnection:
 def test_load_config_uses_env_secrets_and_settings_rows(
     project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    for key in ("DATABASE_URL", "LLM_API_KEY"):
+    for key in (
+        "DATABASE_URL",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_WORKSPACE_ID",
+        "ANTHROPIC_WORKSPACE_HEADER",
+    ):
         monkeypatch.delenv(key, raising=False)
     env_file = project_root / "tests/fixtures/config.env"
     fixture_rows = json.loads(
@@ -34,8 +40,12 @@ def test_load_config_uses_env_secrets_and_settings_rows(
 
     assert config.secrets.database_url is not None
     assert config.secrets.database_url.get_secret_value().endswith("/jobs")
-    assert config.secrets.llm_api_key is not None
-    assert config.secrets.llm_api_key.get_secret_value() == "test-key"
+    assert config.secrets.anthropic_api_key is not None
+    assert config.secrets.anthropic_api_key.get_secret_value() == "test-key"
+    assert config.secrets.anthropic_base_url == "https://claude.example.invalid"
+    assert config.secrets.anthropic_workspace_id == "wrkspc_test"
+    # An empty value in .env falls back to the default header name.
+    assert config.secrets.anthropic_workspace_header == "anthropic-workspace-id"
     assert config.settings.score_threshold == 8
     assert config.settings.max_skill_days == 5
     assert config.settings.max_added_skills == 2
@@ -57,3 +67,6 @@ def test_load_config_supplies_safe_runtime_defaults(project_root: Path) -> None:
     assert config.settings.auto_submit is False
     assert config.settings.batch_daily_cap == 10
     assert config.settings.fast_lane_daily_cap == 5
+    assert config.settings.llm_model == "claude-sonnet-4-6"
+    assert config.settings.llm_input_usd_per_mtok == 3.0
+    assert config.settings.llm_output_usd_per_mtok == 15.0

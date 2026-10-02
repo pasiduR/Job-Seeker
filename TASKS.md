@@ -33,8 +33,9 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 - [x] Sanitizer that strips instruction-like text from scraped content
   - Done: `app/llm/sanitizer.py`, `app/llm/client.py`, `tests/test_sanitizer.py`, `tests/fixtures/malicious_job_description.txt`, added instruction-line removal at the shared LLM trust boundary.
 
-- [!] Concrete `LLMTransport` for the chosen provider in `llm/client.py` (model from settings, key from `LLM_API_KEY`, token usage and cost mapped into `LLMResponse`)
-  - Blocked: no LLM provider is chosen anywhere in the repo (`.env` only has a generic `LLM_API_KEY`). Tell me which provider and model(s) to use for scorer/tailor/extraction, and its per-token prices for cost logging; the transport is small and can be fixture-tested without calls.
+- [x] Concrete `LLMTransport` for the chosen provider in `llm/client.py` (model from settings, key from `LLM_API_KEY`, token usage and cost mapped into `LLMResponse`)
+  - Done: `app/llm/client.py`, `app/config.py`, `.env.example`, `pyproject.toml`, `app/dashboard/pages.py`, `app/dashboard/templates/settings.html`, `tests/test_anthropic_transport.py`, `tests/fixtures/anthropic_messages.json`, config/env/dashboard/metadata tests, added `AnthropicTransport` for Claude Platform on AWS (key from `ANTHROPIC_API_KEY` instead of `LLM_API_KEY`, base URL + workspace header from `.env`), with model `claude-sonnet-4-6`, $3/$15 per MTok prices, max tokens, and timeout in `settings`; 429/5xx/connection errors retry via `LLMClient`, 4xx/refusal/truncation fail without retry.
+- [ ] Wire the LLM steps into the worker: build `AnthropicTransport` + `LLMClient` from config in `python -m app.queue` and pass the scorer, tailor, and career-page extractor (model from `llm_model`) so `run_pipeline` / `run_job` score and tailor jobs
 
 ### Sources and scraping
 - [x] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe

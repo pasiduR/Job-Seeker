@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "A deterministic job-search and application workflow with narrow LLM-assisted steps."
 requires-python = ">=3.11"
 dependencies = [
+    "anthropic>=1.11,<2",
     "crawl4ai>=0.7,<0.8",
     "fastapi>=0.115,<1",
     "jinja2>=3.1,<4",

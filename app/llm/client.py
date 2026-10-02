@@ -11,8 +11,10 @@ from decimal import Decimal
 from time import perf_counter, sleep
 from typing import Any, Generic, Protocol, TypeVar
 
+import anthropic
 from pydantic import BaseModel, ValidationError
 
+from app.config import RuntimeSettings, SecretSettings
 from app.llm.sanitizer import sanitize_scraped_text
 
 
@@ -26,6 +28,14 @@ class TransientLLMError(RuntimeError):
 
 class InvalidLLMOutput(RuntimeError):
     """Raised after both schema-validation attempts fail."""
+
+
+class LLMProviderError(RuntimeError):
+    """A provider failure that retrying the same request will not fix."""
+
+
+class LLMNotConfigured(RuntimeError):
+    """Required provider credentials are missing from ``.env``."""
 
 
 @dataclass(frozen=True)
@@ -205,6 +215,110 @@ class LLMClient(Generic[SchemaT]):
                 raise
             return response, _elapsed_ms(started)
         raise AssertionError("unreachable")
+
+
+TOKENS_PER_PRICE_UNIT = Decimal(1_000_000)
+# 408/409/429 and 5xx (including 529 overloaded) are safe to retry.
+TRANSIENT_STATUS_CODES = frozenset({408, 409, 429})
+_CODE_FENCE = re.compile(r"\A```[A-Za-z]*\n(?P<body>.*)\n```\Z", re.DOTALL)
+
+
+class MessagesAPI(Protocol):
+    def create(self, **kwargs: Any) -> Any: ...
+
+
+@dataclass(frozen=True)
+class TokenPrices:
+    input_usd_per_mtok: Decimal
+    output_usd_per_mtok: Decimal
+
+    def cost(self, input_tokens: int, output_tokens: int) -> Decimal:
+        return (
+            Decimal(input_tokens) * self.input_usd_per_mtok
+            + Decimal(output_tokens) * self.output_usd_per_mtok
+        ) / TOKENS_PER_PRICE_UNIT
+
+
+class AnthropicTransport:
+    """Claude Messages API transport.
+
+    Works against Claude Platform on AWS by pointing ``ANTHROPIC_BASE_URL`` at
+    the AWS endpoint and sending the workspace header. SDK retries are off:
+    ``LLMClient`` owns retries so every attempt is logged.
+    """
+
+    def __init__(
+        self, messages: MessagesAPI, *, max_tokens: int, prices: TokenPrices
+    ) -> None:
+        self._messages = messages
+        self._max_tokens = max_tokens
+        self._prices = prices
+
+    @classmethod
+    def from_config(
+        cls, secrets: SecretSettings, settings: RuntimeSettings
+    ) -> AnthropicTransport:
+        if secrets.anthropic_api_key is None:
+            raise LLMNotConfigured("ANTHROPIC_API_KEY must be set in .env")
+        headers: dict[str, str] = {}
+        if secrets.anthropic_workspace_id:
+            headers[secrets.anthropic_workspace_header] = (
+                secrets.anthropic_workspace_id
+            )
+        client = anthropic.Anthropic(
+            api_key=secrets.anthropic_api_key.get_secret_value(),
+            base_url=secrets.anthropic_base_url,
+            default_headers=headers,
+            max_retries=0,
+            timeout=settings.llm_timeout_seconds,
+        )
+        return cls(
+            client.messages,
+            max_tokens=settings.llm_max_tokens,
+            prices=TokenPrices(
+                input_usd_per_mtok=Decimal(str(settings.llm_input_usd_per_mtok)),
+                output_usd_per_mtok=Decimal(str(settings.llm_output_usd_per_mtok)),
+            ),
+        )
+
+    def complete(self, *, model: str, prompt: str) -> LLMResponse:
+        try:
+            message = self._messages.create(
+                model=model,
+                max_tokens=self._max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except anthropic.APIConnectionError as exc:  # includes timeouts
+            raise TransientLLMError(type(exc).__name__) from exc
+        except anthropic.APIStatusError as exc:
+            reason = f"{type(exc).__name__}: HTTP {exc.status_code}"
+            if exc.status_code in TRANSIENT_STATUS_CODES or exc.status_code >= 500:
+                raise TransientLLMError(reason) from exc
+            raise LLMProviderError(reason) from exc
+
+        if message.stop_reason == "refusal":
+            raise LLMProviderError("model refused the request")
+        if message.stop_reason == "max_tokens":
+            raise LLMProviderError(
+                f"output truncated at llm_max_tokens={self._max_tokens}"
+            )
+        text = "".join(
+            block.text for block in message.content if block.type == "text"
+        )
+        input_tokens = message.usage.input_tokens
+        output_tokens = message.usage.output_tokens
+        return LLMResponse(
+            content=_strip_code_fence(text),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=self._prices.cost(input_tokens, output_tokens),
+        )
+
+
+def _strip_code_fence(text: str) -> str:
+    stripped = text.strip()
+    match = _CODE_FENCE.match(stripped)
+    return match.group("body") if match else stripped
 
 
 def _assemble_prompt(prompt: str, untrusted_data: Mapping[str, str]) -> str:

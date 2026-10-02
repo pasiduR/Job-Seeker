@@ -23,11 +23,15 @@ class SecretSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        env_ignore_empty=True,
         extra="ignore",
     )
 
     database_url: SecretStr | None = None
-    llm_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
+    anthropic_base_url: str | None = None
+    anthropic_workspace_id: str | None = None
+    anthropic_workspace_header: str = "anthropic-workspace-id"
     gmail_client_id: SecretStr | None = None
     gmail_client_secret: SecretStr | None = None
     imap_host: str | None = None
@@ -61,6 +65,12 @@ class RuntimeSettings(BaseModel):
         Literal["job_board", "ats_board", "career_page", "rss", "email_alert"]
     ] = Field(default_factory=lambda: ["job_board"])
     fast_lane_daily_cap: int = Field(default=5, ge=0)
+    llm_model: str = Field(default="claude-sonnet-4-6", min_length=1)
+    # USD per million tokens, used for llm_calls cost logging.
+    llm_input_usd_per_mtok: float = Field(default=3.0, ge=0)
+    llm_output_usd_per_mtok: float = Field(default=15.0, ge=0)
+    llm_max_tokens: int = Field(default=16000, ge=1)
+    llm_timeout_seconds: float = Field(default=120.0, gt=0)
 
 
 class AppConfig(BaseModel):

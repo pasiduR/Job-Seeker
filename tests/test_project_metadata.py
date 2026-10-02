@@ -7,6 +7,7 @@ def test_pyproject_declares_required_runtime(pyproject_data: dict[str, Any]) -> 
 
     assert project["requires-python"] == ">=3.11"
     for package in (
+        "anthropic",
         "crawl4ai",
         "playwright",
         "psycopg",

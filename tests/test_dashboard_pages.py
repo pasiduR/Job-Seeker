@@ -296,6 +296,14 @@ def test_settings_are_validated_before_saving(store: MemoryDashboardStore, tmp_p
     assert store.settings["skill_placement"] == "skills_section"
     assert store.settings["auto_submit"] is False
 
+    llm_form = {**form, "llm_model": "claude-sonnet-4-6", "llm_input_usd_per_mtok": "2.5"}
+    assert "saved" in post(client, "/settings", llm_form).headers["location"]
+    assert store.settings["llm_model"] == "claude-sonnet-4-6"
+    assert store.settings["llm_input_usd_per_mtok"] == 2.5
+    page = client.get("/settings", auth=AUTH).text
+    assert 'name="llm_model" value="claude-sonnet-4-6"' in page
+    assert 'step="any" name="llm_input_usd_per_mtok"' in page
+
     rejected = post(client, "/settings", {**form, "score_threshold": "11"})
     assert "error=" in rejected.headers["location"]
     assert store.settings["score_threshold"] == 8

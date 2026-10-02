@@ -286,8 +286,11 @@ def _settings_fields(values: RuntimeSettings) -> list[dict[str, Any]]:
         elif get_origin(annotation) is Literal:
             field["kind"] = "choice"
             field["options"] = list(get_args(annotation))
+        elif annotation is str:
+            field["kind"] = "text"
         else:
             field["kind"] = "number"
+            field["step"] = "any" if annotation is float else "1"
         fields.append(field)
     return fields
 
