@@ -1,0 +1,41 @@
+{
+  "remotive": {
+    "jobs": [
+      {
+        "id": 11,
+        "title": "Remote Python Engineer",
+        "company_name": "Remote Co",
+        "url": "https://remotive.com/remote-jobs/11",
+        "description": "<p>Build APIs.</p>",
+        "candidate_required_location": "Worldwide",
+        "publication_date": "2026-10-01T08:00:00Z"
+      }
+    ]
+  },
+  "remoteok": [
+    {"legal": "metadata"},
+    {
+      "id": "12",
+      "position": "Distributed Systems Engineer",
+      "company": "Async Co",
+      "url": "https://remoteok.com/remote-jobs/12",
+      "description": "<p>Operate services.</p>",
+      "location": "Worldwide",
+      "date": "2026-10-01T07:00:00Z"
+    }
+  ],
+  "arbeitnow": {
+    "data": [
+      {
+        "slug": "backend-13",
+        "title": "Backend Developer",
+        "company_name": "Berlin Co",
+        "url": "https://arbeitnow.com/jobs/backend-13",
+        "description": "<p>Develop services.</p>",
+        "location": "Berlin",
+        "remote": true,
+        "created_at": 1790838000
+      }
+    ]
+  }
+}

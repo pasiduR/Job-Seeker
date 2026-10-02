@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from html.parser import HTMLParser
 from typing import Any, Protocol
 from urllib.parse import quote
 
 from app.http import HttpResponse
+from app.sources.parsing import html_to_text, parse_timestamp
 from app.sources.types import JobListing
 
 
@@ -41,10 +40,12 @@ class AtsApiSource:
                 title=_required(job, "title"),
                 company=company,
                 url=_required(job, "absolute_url"),
-                description=_html_to_text(_required(job, "content")),
+                description=html_to_text(_required(job, "content")),
                 location=_nested_string(job, "location", "name"),
                 remote=_remote_from_location(_nested_string(job, "location", "name")),
-                posted_at=_timestamp(job.get("first_published") or job.get("updated_at")),
+                posted_at=parse_timestamp(
+                    job.get("first_published") or job.get("updated_at")
+                ),
                 source_job_id=str(job["id"]),
                 source_name="greenhouse",
             )
@@ -74,7 +75,7 @@ class AtsApiSource:
                         _nested_string(job, "categories", "location")
                     )
                 ),
-                posted_at=_timestamp(job.get("createdAt")),
+                posted_at=parse_timestamp(job.get("createdAt")),
                 source_job_id=_required(job, "id"),
                 source_name="lever",
             )
@@ -98,29 +99,12 @@ class AtsApiSource:
                 description=_required(job, "descriptionPlain"),
                 location=_optional_string(job.get("location")),
                 remote=_optional_bool(job.get("isRemote")),
-                posted_at=_timestamp(job.get("publishedAt")),
+                posted_at=parse_timestamp(job.get("publishedAt")),
                 source_job_id=_required(job, "id"),
                 source_name="ashby",
             )
             for job in jobs
         ]
-
-
-class _TextExtractor(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.parts: list[str] = []
-
-    def handle_data(self, data: str) -> None:
-        text = data.strip()
-        if text:
-            self.parts.append(text)
-
-
-def _html_to_text(value: str) -> str:
-    parser = _TextExtractor()
-    parser.feed(value)
-    return "\n".join(parser.parts)
 
 
 def _require_list(payload: object, key: str) -> list[dict[str, Any]]:
@@ -165,13 +149,3 @@ def _remote_from_location(location: str | None) -> bool | None:
     if location is None:
         return None
     return "remote" in location.lower()
-
-
-def _timestamp(value: object) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        seconds = float(value) / 1000 if value > 10_000_000_000 else float(value)
-        return datetime.fromtimestamp(seconds, tz=timezone.utc)
-    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)

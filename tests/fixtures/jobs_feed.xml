@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example Jobs</title>
+    <item>
+      <guid>rss-14</guid>
+      <title>Site Reliability Engineer</title>
+      <company>Feed Co</company>
+      <link>https://example.com/jobs/rss-14</link>
+      <description><![CDATA[<p>Keep systems reliable.</p>]]></description>
+      <location>Remote</location>
+      <pubDate>Thu, 01 Oct 2026 06:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
