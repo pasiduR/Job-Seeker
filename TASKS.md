@@ -34,7 +34,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/llm/sanitizer.py`, `app/llm/client.py`, `tests/test_sanitizer.py`, `tests/fixtures/malicious_job_description.txt`, added instruction-line removal at the shared LLM trust boundary.
 
 ### Sources and scraping
-- [ ] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe
+- [x] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe
+  - Done: `app/sources/models.py`, `tests/test_sources_model.py`, `tests/fixtures/source.json`, added typed source CRUD, canonical URL dedupe, and rejection of secrets in stored config.
 - [ ] `sources/jobspy.py`: Indeed, Glassdoor, and other big boards at low volume
 - [ ] `sources/ats_api.py`: public JSON APIs for Greenhouse, Lever, and Ashby
 - [ ] `sources/rss.py`: remote boards (Remotive, RemoteOK, Arbeitnow APIs, plus RSS)

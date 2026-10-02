@@ -1,0 +1,10 @@
+{
+  "id": 7,
+  "name": "Example Careers",
+  "type": "career_page",
+  "url": "https://example.com/careers",
+  "config": {"polling_interval_minutes": 30},
+  "active": true,
+  "created_at": "2026-10-02T08:00:00+00:00",
+  "updated_at": "2026-10-02T08:00:00+00:00"
+}
