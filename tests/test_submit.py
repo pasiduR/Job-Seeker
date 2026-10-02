@@ -238,3 +238,29 @@ def test_postgres_store_loads_plan_with_click_texts() -> None:
     assert (plan.status, plan.cv_version_id, plan.next_buttons) == (JobStatus.APPROVED, 11, ("Next", "Continue"))
     assert plan.answers == ({"label": "Email *"},)
     assert "f.outcome = 'filled'" in connection.queries[0][0]
+
+
+def test_login_wall_on_replay_aborts_before_submit(tmp_path: Path, project_root: Path) -> None:
+    html = FixtureBrowser(project_root).html.replace(
+        '<section id="step2"', '<label for="pw">Password</label><input id="pw" type="password"><section id="step2"'
+    )
+    store = MemorySubmitStore(make_plan(tmp_path))
+    browser = FixtureBrowser(project_root, html)
+
+    outcome = service(store, browser, tmp_path).run(job_id=3, daily_cap=10)
+
+    assert outcome.error == "not submitted: ReplayAborted: login wall: the page asks for a password"
+    assert browser.submitted is False and store.applications == {}
+
+
+def test_two_services_racing_for_one_job_submit_once(tmp_path: Path, project_root: Path) -> None:
+    store = MemorySubmitStore(make_plan(tmp_path))
+    first, second = FixtureBrowser(project_root), FixtureBrowser(project_root)
+
+    outcomes = [
+        service(store, first, tmp_path).run(job_id=3, daily_cap=10),
+        service(store, second, tmp_path).run(job_id=3, daily_cap=10),
+    ]
+
+    assert [outcome.status for outcome in outcomes] == [JobStatus.SUBMITTED, JobStatus.NEEDS_MANUAL]
+    assert (first.submitted, second.opened) == (True, [])

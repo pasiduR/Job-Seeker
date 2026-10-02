@@ -128,7 +128,8 @@ Goal: filled applications reach the review queue, and I approve them before anyt
 ### Tests and evals
 - [x] Form-mapper eval set (10–20 real form HTML fixtures) checking schema validity, no guesses, and correct `unknown` answers
   - Done: `tests/evals/forms/` (13 real Greenhouse and Lever forms, scripts/styles/links stripped), `tests/evals/form_mapper_cases.json`, `tests/evals/form_profile.json`, `tests/evals/harness.py`, `tests/evals/__main__.py`, `tests/test_form_mapper_eval.py`, `app/browser/extract_fields.js`, `tests/evals/results/form_map_v1__claude-sonnet-4-6.json`, eval renders each form offline, maps it, and reports schema validity, agreement with 127 field expectations (names, email, CV upload; demographics, consents, salary, unknown eligibility must stay `unknown`), and violations (raw answers the code had to discard). Live baseline ($0.17): 13/13 valid, 127/127 expectations met, 4 discarded answers (a privacy acknowledgement, one sponsorship combobox value, two "how did you hear" options not literally in the profile). Real forms also showed extraction gaps, now fixed: hidden widget mirror inputs, "Attach" labels, Lever questions outside `<label>`, and the ✱ required marker.
-- [~] Tests for submit guards (no double-applying, approval required) and for stop conditions
+- [x] Tests for submit guards (no double-applying, approval required) and for stop conditions
+  - Done: `tests/test_submit.py`, `tests/test_worker_tasks.py` (plus the existing `tests/test_stop_conditions.py`, `tests/test_form_filler.py`, `tests/test_migrations.py`), audited and filled gaps: the `submit` step only touches `approved` jobs, two submit runs for one job submit once, a login wall during replay aborts before the click; already covered were approval required, the unique `applications(job_id)` reservation, daily cap, changed forms, CAPTCHA, failures after the click, and every filler stop condition.
 
 ---
 

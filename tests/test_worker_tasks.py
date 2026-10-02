@@ -414,3 +414,21 @@ def test_capped_approval_stays_approved_and_a_later_run_submits(
                           payload={"steps": ["submit"]}, attempts=1)
     tasks.run_pipeline(later_run)
     assert world.jobs[1]["status"] == JobStatus.SUBMITTED
+
+
+def test_submit_step_only_touches_approved_jobs(
+    tmp_path: Path, project_root: Path, listings: list[JobListing]
+) -> None:
+    world = MemoryWorld([], [SearchFilter()])
+    for index, status in enumerate([JobStatus.FILLED, JobStatus.TAILORED, JobStatus.APPROVED, JobStatus.SUBMITTED]):
+        world.save_found(1, listings[0].model_copy(update={"url": f"https://jobs.example.com/{index}", "title": f"Job {index}"}))
+        world.jobs[index + 1]["status"] = status
+    submitter = FixtureSubmit()
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=submitter)
+
+    tasks.run_pipeline(item("run_pipeline", {"steps": ["submit"]}))
+
+    assert [call[0] for call in submitter.calls] == [3]
+    assert [job["status"] for job in world.jobs.values()] == [
+        JobStatus.FILLED, JobStatus.TAILORED, JobStatus.SUBMITTED, JobStatus.SUBMITTED,
+    ]
