@@ -35,7 +35,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 
 - [x] Concrete `LLMTransport` for the chosen provider in `llm/client.py` (model from settings, key from `LLM_API_KEY`, token usage and cost mapped into `LLMResponse`)
   - Done: `app/llm/client.py`, `app/config.py`, `.env.example`, `pyproject.toml`, `app/dashboard/pages.py`, `app/dashboard/templates/settings.html`, `tests/test_anthropic_transport.py`, `tests/fixtures/anthropic_messages.json`, config/env/dashboard/metadata tests, added `AnthropicTransport` for Claude Platform on AWS (key from `ANTHROPIC_API_KEY` instead of `LLM_API_KEY`, base URL + workspace header from `.env`), with model `claude-sonnet-4-6`, $3/$15 per MTok prices, max tokens, and timeout in `settings`; 429/5xx/connection errors retry via `LLMClient`, 4xx/refusal/truncation fail without retry.
-- [ ] Wire the LLM steps into the worker: build `AnthropicTransport` + `LLMClient` from config in `python -m app.queue` and pass the scorer, tailor, and career-page extractor (model from `llm_model`) so `run_pipeline` / `run_job` score and tailor jobs
+- [x] Wire the LLM steps into the worker: build `AnthropicTransport` + `LLMClient` from config in `python -m app.queue` and pass the scorer, tailor, and career-page extractor (model from `llm_model`) so `run_pipeline` / `run_job` score and tailor jobs
+  - Done: `app/queue/__main__.py`, `app/queue/tasks.py`, `tests/test_worker_entrypoint.py`, the worker builds one `LLMClient` over `AnthropicTransport` and passes the scorer, tailor, and career-page extractor (all on `llm_model`); without `ANTHROPIC_API_KEY` they stay unwired and LLM queue items fail with a clear message.
 
 ### Sources and scraping
 - [x] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe

@@ -159,7 +159,7 @@ RunnerFactory = Callable[[Sequence[PipelineStep]], PipelineRunner]
 class PipelineTasks:
     """Handlers for ``run_pipeline`` and ``run_job`` queue items.
 
-    ``scorer`` and ``tailor`` are None until an LLM transport is configured;
+    ``scorer`` and ``tailor`` are None when ANTHROPIC_API_KEY is missing;
     LLM steps then fail the queue item, never the jobs.
     """
 
@@ -292,7 +292,8 @@ class PipelineTasks:
         ]
         if missing:
             raise PipelineNotReady(
-                f"LLM transport is not configured; cannot run {', '.join(missing)}"
+                "LLM transport is not configured (set ANTHROPIC_API_KEY in .env); "
+                f"cannot run {', '.join(missing)}"
             )
         try:
             self._base_cv.ensure_compiled()
