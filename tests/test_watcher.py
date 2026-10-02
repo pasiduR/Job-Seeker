@@ -132,3 +132,34 @@ def test_jobspy_watcher_uses_posted_within_hour():
     from app.sources.scraper import SearchFilter
     subject.fetch(board, SearchFilter(roles=("Python",)), hours_old=1)
     assert jobspy.calls[0][1]["hours_old"] == 1
+
+
+def test_disabling_subscription_during_fetch_discards_results(project_root, monkeypatch):
+    connection = WatchConnection()
+    original_execute = connection.execute
+    def execute(query, params=None):
+        if "SELECT sub.id FROM subscriptions" in " ".join(query.split()):
+            return []
+        return original_execute(query, params)
+    connection.execute = execute
+    monkeypatch.setattr(SourceRepository, "get", lambda self, source_id: source(SourceType.RSS, "https://acme.example/feed"))
+    records = json.loads((project_root / "tests/fixtures/worker_listings.json").read_text())
+    class Dispatcher:
+        def fetch(self, *args, **kwargs):
+            return [JobListing(**row) for row in records]
+    Watcher(connection, Dispatcher(), RuntimeSettings()).poll(
+        QueueItem(1, uuid4(), None, "poll_subscription", {"subscription_id": 1}, 1))
+    assert not connection.jobs and not connection.queue and not connection.polled
+
+
+def test_jobspy_subscription_minimum_overrides_short_interval():
+    connection = WatchConnection()
+    now = datetime.fromisoformat("2026-10-02T06:00:00+05:30")
+    original_execute = connection.execute
+    def execute(query, params=None):
+        if "SELECT sub.id, sub.polling_interval_minutes" in " ".join(query.split()):
+            return [(1, 1, now, "job_board", {"adapter": "jobspy"})]
+        return original_execute(query, params)
+    connection.execute = execute
+    assert enqueue_due(connection, now=now + timedelta(minutes=14), settings=RuntimeSettings()) == 0
+    assert enqueue_due(connection, now=now + timedelta(minutes=15), settings=RuntimeSettings()) == 1

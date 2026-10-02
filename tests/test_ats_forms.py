@@ -62,7 +62,7 @@ class OneRowConnection:
     ],
 )
 def test_worker_store_resolves_the_form_url_from_the_source(source: tuple[Any, ...], form_url: str) -> None:
-    row = (7, "Backend role", 8, "https://stripe.com/jobs/listing/8172508", "8172508", *source)
+    row = (7, "Backend role", 8, "https://stripe.com/jobs/listing/8172508", "8172508", *source, "batch", 1)
 
     job = PostgresWorkerStore(OneRowConnection(row)).get_job(7)  # type: ignore[arg-type]
 

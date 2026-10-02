@@ -51,3 +51,9 @@ def test_flagged_job_stays_in_review(tmp_path, project_root, facts):
     tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=submit)
     tasks.run_job(item("run_job", {"trigger": "event"}, 1))
     assert world.jobs[1]["status"] == JobStatus.FILLED and not submit.calls
+
+
+def test_auto_submit_policy_respects_custom_score_threshold(facts):
+    settings = RuntimeSettings(auto_submit=True, auto_submit_score_threshold=9, trusted_source_ids=[1])
+    assert not can_auto_submit(AutoSubmitFacts(**facts), settings)
+    assert can_auto_submit(AutoSubmitFacts(**{**facts, "score": 9}), settings)

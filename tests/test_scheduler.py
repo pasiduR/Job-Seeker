@@ -53,6 +53,31 @@ def test_due_queue_is_idempotent_and_uses_timezone():
     assert "FOR UPDATE SKIP LOCKED" in connection.queries[0]
 
 
+def test_schedule_single_step_and_no_matching_minute():
+    class SingleStep(ScheduleConnection):
+        def execute(self, query, params=None):
+            if query.startswith("SELECT id, cron_expression"):
+                return [(1, "*/10 * * * *", "score", self.last)]
+            return super().execute(query, params)
+    connection = SingleStep()
+    now = datetime.fromisoformat("2026-10-02T06:01:00+05:30")
+    assert enqueue_due(connection, now=now, timezone_name="Asia/Colombo") == 0
+    assert enqueue_due(connection, now=now.replace(minute=10), timezone_name="Asia/Colombo") == 1
+    assert json.loads(connection.items[0][4])["steps"] == ["score"]
+
+
+def test_failed_schedule_enqueue_does_not_advance_cursor():
+    class Failed(ScheduleConnection):
+        def execute(self, query, params=None):
+            if "INSERT INTO queue_jobs" in query:
+                raise RuntimeError("queue unavailable")
+            return super().execute(query, params)
+    connection = Failed()
+    with pytest.raises(RuntimeError):
+        enqueue_due(connection, now=datetime.fromisoformat("2026-10-02T06:00:00+05:30"), timezone_name="Asia/Colombo")
+    assert connection.last is None
+
+
 class ScheduleDashboard(MemoryDashboardStore):
     def __init__(self):
         super().__init__({"jobs": [], "skills": [], "run_logs": [], "settings": {}})
