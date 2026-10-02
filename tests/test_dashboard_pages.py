@@ -372,3 +372,14 @@ def test_run_for_this_job_is_offered_for_runnable_jobs(store: MemoryDashboardSto
     response = post(client, "/jobs/1/run", {})
     assert "Pipeline+for+job+1+queued" in response.headers["location"]
     assert queue.items[0]["task"] == "run_job" and queue.items[0]["job_id"] == 1
+
+
+def test_list_settings_are_edited_as_comma_separated_text(store: MemoryDashboardStore, tmp_path: Path) -> None:
+    client = make_client(store, tmp_path)
+    assert 'name="source_finder_types" value="job_board"' in client.get("/settings", auth=AUTH).text
+
+    post(client, "/settings", {"source_finder_types": "job_board, ats_board"})
+    assert store.settings["source_finder_types"] == ["job_board", "ats_board"]
+
+    rejected = post(client, "/settings", {"source_finder_types": "linkedin"})
+    assert "error=" in rejected.headers["location"]

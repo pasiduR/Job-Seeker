@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Python Engineer",
+    "company": "Northwind",
+    "url": "https://jobs.example.com/python-engineer",
+    "description": "Build Python APIs with PostgreSQL.",
+    "location": "Remote",
+    "remote": true,
+    "source_job_id": "r-1",
+    "source_name": "remotive"
+  },
+  {
+    "title": "Product Designer",
+    "company": "Fabrikam",
+    "url": "https://jobs.example.com/product-designer",
+    "description": "Design Figma prototypes.",
+    "location": "Remote",
+    "remote": true,
+    "source_job_id": "r-2",
+    "source_name": "remotive"
+  },
+  {
+    "title": "Senior Python Engineer",
+    "company": "Contoso",
+    "url": "https://jobs.example.com/senior-python",
+    "description": "Lead Python teams.",
+    "location": "Remote",
+    "remote": true,
+    "source_job_id": "r-3",
+    "source_name": "remotive"
+  }
+]

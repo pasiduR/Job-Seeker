@@ -56,6 +56,10 @@ class RuntimeSettings(BaseModel):
     )
     auto_submit: bool = False
     batch_daily_cap: int = Field(default=10, ge=0)
+    jobspy_results_wanted: int = Field(default=20, ge=1)
+    source_finder_types: list[
+        Literal["job_board", "ats_board", "career_page", "rss", "email_alert"]
+    ] = Field(default_factory=lambda: ["job_board"])
     fast_lane_daily_cap: int = Field(default=5, ge=0)
 
 
