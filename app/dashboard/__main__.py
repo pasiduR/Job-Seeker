@@ -14,8 +14,10 @@ from app.dashboard.app import DashboardCredentials, create_app
 from app.dashboard.pages import router as pages_router
 from app.dashboard.repository import DashboardRepos, PostgresDashboardStore
 from app.db.connection import open_pool
+from app.queue.postgres import PostgresQueue
 from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
 from app.steps.latex import LatexCompiler
+from app.triggers.manual import ManualTrigger
 
 
 def repo_factory(pool: ConnectionPool):  # type: ignore[no-untyped-def]
@@ -29,6 +31,7 @@ def repo_factory(pool: ConnectionPool):  # type: ignore[no-untyped-def]
                 base_cv=BaseCVService(
                     store=PostgresBaseCVStore(connection), compiler=compiler
                 ),
+                trigger=ManualTrigger(PostgresQueue(connection)),
             )
 
     return open_repos

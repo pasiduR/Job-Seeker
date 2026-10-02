@@ -75,6 +75,21 @@ class PostgresQueue:
             row = next(iter(rows), None)
         return _queue_item(row) if row is not None else None
 
+    def has_pending(
+        self, *, task: str, job_id: int | None, payload: Mapping[str, object]
+    ) -> bool:
+        with self._connection.transaction():
+            rows = self._connection.execute(
+                """
+                SELECT 1 FROM queue_jobs
+                WHERE task = %s AND job_id IS NOT DISTINCT FROM %s::bigint
+                  AND payload = %s::jsonb AND status IN ('queued', 'running')
+                LIMIT 1
+                """,
+                (task, job_id, json.dumps(payload)),
+            )
+            return next(iter(rows), None) is not None
+
     def claim(self, worker_id: str) -> QueueItem | None:
         with self._connection.transaction():
             rows = self._connection.execute(

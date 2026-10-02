@@ -17,6 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import SecretStr
 
+from app.triggers.manual import PIPELINE_STEPS
+
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -131,7 +133,16 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request, user: str = Depends(require_user)) -> Response:
-        return templates.TemplateResponse(request, "home.html", {"user": user})
+        return templates.TemplateResponse(
+            request,
+            "home.html",
+            {
+                "user": user,
+                "pipeline_steps": PIPELINE_STEPS,
+                "message": request.query_params.get("message"),
+                "error": request.query_params.get("error"),
+            },
+        )
 
     for router in routers:
         app.include_router(router, dependencies=[Depends(require_user)])

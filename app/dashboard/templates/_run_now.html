@@ -1,0 +1,10 @@
+<form class="inline" method="post" action="/run">
+  <input type="hidden" name="back" value="{{ back }}">
+  <label>Run now
+    <select name="step">
+      <option value="all">full pipeline</option>
+      {% for step in pipeline_steps %}<option value="{{ step }}">{{ step }} only</option>{% endfor %}
+    </select>
+  </label>
+  <button type="submit">Run now</button>
+</form>

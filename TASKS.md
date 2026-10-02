@@ -72,7 +72,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/dashboard/templates/`, `app/dashboard/static/style.css`, `app/db/connection.py`, `app/config.py`, `pyproject.toml`, `.env.example`, `tests/test_dashboard_app.py`, added a FastAPI + Jinja2 app factory with HTTP Basic auth from `.env`, same-origin checks on writes, security headers, per-request repositories, and a pooled-connection entry point.
 - [x] Pages: Sources, Search filters, Base CV + profile editor, Jobs list (status, score, filters), Skills to learn, Run logs, Settings
   - Done: `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/templates/*.html`, `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/db/connection.py`, `tests/test_dashboard_pages.py`, `tests/fixtures/dashboard_data.json`, added server-rendered pages with validated forms (sources, filters, base CV compile + PDF download, profile JSON, settings), job status/score filtering, and http(s)-only links for scraped URLs.
-- [ ] "Run now" (full pipeline or a single step) and a "Run for this job" button on each job row
+- [x] "Run now" (full pipeline or a single step) and a "Run for this job" button on each job row
+  - Done: `app/triggers/manual.py`, `app/queue/postgres.py`, `app/dashboard/pages.py`, `app/dashboard/app.py`, `app/dashboard/repository.py`, `app/dashboard/__main__.py`, `app/dashboard/templates/_run_now.html`, `home.html`, `jobs.html`, `tests/test_manual_trigger.py`, `tests/test_dashboard_pages.py`, buttons enqueue `run_pipeline` (all steps or one) and `run_job` items tagged `trigger: manual`, skipping duplicates already queued or running; executing them is the new worker task below.
 
 ### Tests and evals
 - [ ] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)

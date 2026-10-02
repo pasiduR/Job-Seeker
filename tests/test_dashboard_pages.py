@@ -23,6 +23,8 @@ from app.dashboard.repository import (
 from app.sources.models import Source, SourceCreate
 from app.steps.base_cv import BaseCVService, CVVersion
 from app.steps.latex import LatexCompileError
+from app.triggers.manual import ManualTrigger
+from tests.test_manual_trigger import MemoryTriggerQueue
 
 
 AUTH = ("admin", "fixture-password")
@@ -137,12 +139,20 @@ def store(project_root: Path) -> MemoryDashboardStore:
     return MemoryDashboardStore(data)
 
 
-def make_client(store: MemoryDashboardStore, tmp_path: Path, compiler: FixtureCompiler | None = None) -> TestClient:
+def make_client(
+    store: MemoryDashboardStore,
+    tmp_path: Path,
+    compiler: FixtureCompiler | None = None,
+    queue: MemoryTriggerQueue | None = None,
+) -> TestClient:
+    trigger = ManualTrigger(queue or MemoryTriggerQueue())
+
     @contextmanager
     def factory() -> Iterator[DashboardRepos]:
         yield DashboardRepos(
             store=store,
             base_cv=BaseCVService(store=store, compiler=compiler or FixtureCompiler(), storage_dir=tmp_path),
+            trigger=trigger,
         )
 
     app = create_app(
@@ -328,3 +338,37 @@ def test_postgres_store_upserts_profile_and_settings_as_json() -> None:
         ("score_threshold", "8"),
         ("skill_placement", '"skills_section"'),
     ]
+
+
+def test_run_now_queues_full_pipeline_or_single_step(store: MemoryDashboardStore, tmp_path: Path) -> None:
+    queue = MemoryTriggerQueue()
+    client = make_client(store, tmp_path, queue=queue)
+    assert 'action="/run"' in client.get("/", auth=AUTH).text
+
+    full = post(client, "/run", {"step": "all", "back": "/"})
+    single = post(client, "/run", {"step": "score", "back": "/jobs"})
+    repeat = post(client, "/run", {"step": "score", "back": "/jobs"})
+    unknown = post(client, "/run", {"step": "submit", "back": "/"})
+
+    assert full.headers["location"].startswith("/?message=Full+pipeline+queued")
+    assert single.headers["location"].startswith("/jobs?message=")
+    assert "already+queued" in repeat.headers["location"]
+    assert "Unknown+step" in unknown.headers["location"]
+    assert [item["payload"]["steps"] for item in queue.items] == [
+        ["find_sources", "scrape", "score", "tailor"],
+        ["score"],
+    ]
+
+
+def test_run_for_this_job_is_offered_for_runnable_jobs(store: MemoryDashboardStore, tmp_path: Path) -> None:
+    queue = MemoryTriggerQueue()
+    client = make_client(store, tmp_path, queue=queue)
+
+    page = client.get("/jobs", auth=AUTH).text
+    assert 'action="/jobs/1/run"' in page
+    assert 'action="/jobs/3/run"' in page
+    assert 'action="/jobs/2/run"' not in page
+
+    response = post(client, "/jobs/1/run", {})
+    assert "Pipeline+for+job+1+queued" in response.headers["location"]
+    assert queue.items[0]["task"] == "run_job" and queue.items[0]["job_id"] == 1

@@ -17,6 +17,10 @@ from app.dashboard.repository import DashboardRepos, SearchFilterCreate
 from app.queue.state_machine import JobStatus
 from app.sources.models import SourceCreate, SourceType
 from app.steps.latex import LatexCompileError, LatexEngineMissing
+from app.triggers.manual import PIPELINE_STEPS
+
+
+RUNNABLE_STATUSES = frozenset({JobStatus.FOUND.value, JobStatus.SCORED.value})
 
 
 router = APIRouter()
@@ -225,7 +229,34 @@ def jobs_page(
         statuses=statuses,
         selected_status=selected_status or "",
         min_score=score if score is not None else "",
+        pipeline_steps=PIPELINE_STEPS,
+        runnable_statuses=RUNNABLE_STATUSES,
     )
+
+
+# --- Manual triggers ---------------------------------------------------------
+
+
+@router.post("/run")
+def run_now(
+    step: str = Form("all"),
+    back: Literal["/", "/jobs"] = Form("/"),
+    repos: DashboardRepos = Depends(get_repos),
+) -> Response:
+    if step != "all" and step not in PIPELINE_STEPS:
+        return _redirect(back, error=f"Unknown step: {step}")
+    result = repos.trigger.run_now(None if step == "all" else step)
+    if result.queued:
+        return _redirect(back, message=result.message)
+    return _redirect(back, error=result.message)
+
+
+@router.post("/jobs/{job_id}/run")
+def run_for_job(job_id: int, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    result = repos.trigger.run_for_job(job_id)
+    if result.queued:
+        return _redirect("/jobs", message=result.message)
+    return _redirect("/jobs", error=result.message)
 
 
 @router.get("/skills", response_class=HTMLResponse)
