@@ -87,7 +87,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### Tests and evals
 - [x] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)
   - Done: `tests/test_parser_edge_cases.py`, `tests/fixtures/jobs_feed_atom.xml`, audited existing parser/dedupe/state-machine/queue tests and filled gaps: Atom feeds, malformed feed and ATS payloads, JobSpy retry limit, store-level duplicates, queue backoff/final failure, unknown worker tasks, and pipeline stop after skip.
-- [ ] Eval sets of 10–20 fixtures each for the scorer and the tailor (tailor checks: no invented entities, LaTeX compiles, N/M limits)
+- [!] Eval sets of 10–20 fixtures each for the scorer and the tailor (tailor checks: no invented entities, LaTeX compiles, N/M limits)
+  - Blocked: harness and cases are in (`tests/evals/harness.py`, `scorer_cases.json` with 12 cases, `tailor_cases.json` with 10 cases, `tests/test_eval_harness.py`; it reports schema validity, score agreement, rule violations, compile success, and regressions between prompt versions). Running it for real needs the LLM transport (blocked above, and it costs API spend, so I will ask first) and `tectonic` or `pdflatex` installed for the compile check.
 
 ---
 
