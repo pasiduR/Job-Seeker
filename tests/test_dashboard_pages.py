@@ -15,6 +15,7 @@ from app.dashboard.repository import (
     DashboardRepos,
     JobRow,
     PostgresDashboardStore,
+    ReviewItem,
     RunLogRow,
     SearchFilterCreate,
     SearchFilterRow,
@@ -45,6 +46,7 @@ class MemoryDashboardStore:
         self.logs = [RunLogRow(**{**log, "created_at": datetime.fromisoformat(log["created_at"])}) for log in data["run_logs"]]
         self.settings: dict[str, Any] = dict(data["settings"])
         self.job_queries: list[dict[str, Any]] = []
+        self.review_items: list[ReviewItem] = []
 
     def list_sources(self) -> list[Source]:
         return list(self.sources.values())
@@ -113,6 +115,14 @@ class MemoryDashboardStore:
     def list_skills(self) -> list[SkillRow]:
         return self.skills
 
+    def list_review_items(self, *, limit: int) -> list[ReviewItem]:
+        return self.review_items[:limit]
+
+    def get_screenshot_path(self, job_id: int) -> str | None:
+        return next(
+            (item.screenshot_path for item in self.review_items if item.job_id == job_id), None
+        )
+
     def list_run_logs(self, *, limit: int) -> list[RunLogRow]:
         return self.logs[:limit]
 
@@ -167,7 +177,7 @@ def post(client: TestClient, path: str, data: Mapping[str, Any]):
     return client.post(path, data=data, auth=AUTH, headers=ORIGIN)
 
 
-@pytest.mark.parametrize("path", ["/sources", "/filters", "/cv", "/jobs", "/skills", "/runs", "/settings"])
+@pytest.mark.parametrize("path", ["/sources", "/filters", "/cv", "/jobs", "/review", "/skills", "/runs", "/settings"])
 def test_every_page_renders_behind_auth(store: MemoryDashboardStore, tmp_path: Path, path: str) -> None:
     client = make_client(store, tmp_path)
 

@@ -118,8 +118,9 @@ Goal: filled applications reach the review queue, and I approve them before anyt
   - Done: `app/steps/fill.py`, `app/queue/__main__.py`, `tests/test_fill_step.py`, LinkedIn jobs (only from alert emails) are never opened: the fill step sets `needs_manual` and queues one pending `apply_manually` row in `notifications` per job; the `notify/` task delivers it.
 
 ### Review and notifications
-- [~] Review queue page showing the screenshot, filled answers with flagged fields, the CV diff, and Approve / Reject
-- [ ] `notify/`: Telegram bot or ntfy push with title, company, score, screenshot link, and Approve / Reject buttons
+- [x] Review queue page showing the screenshot, filled answers with flagged fields, the CV diff, and Approve / Reject
+  - Done: `app/dashboard/templates/review.html`, `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/templates/base.html`, `app/dashboard/static/style.css`, `tests/test_review_page.py`, `tests/test_dashboard_pages.py`, added `/review` listing `filled` jobs with the final screenshot (served only from `data/screenshots/`), every answer with its source, flagged rows highlighted (code flags, drafted, unknown), the CV diff or "base CV used", and Approve / Reject buttons (handled by the Approve task). "Run for this job" now also shows for `tailored` jobs.
+- [~] `notify/`: Telegram bot or ntfy push with title, company, score, screenshot link, and Approve / Reject buttons
 - [ ] Approve sends the job to submit right away; Reject sets it to `skipped`
 
 ### Tests and evals

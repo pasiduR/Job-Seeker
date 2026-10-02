@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+<p class="muted">Filled applications waiting for your decision. Nothing is submitted until you approve it.</p>
+{% for item in items %}
+<section class="review-item" id="job-{{ item.job_id }}">
+  <h2><a href="{{ item.url | http_url }}" rel="noreferrer noopener" target="_blank">{{ item.title }}</a> · {{ item.company }}</h2>
+  <p class="muted">
+    Score {{ item.score if item.score is not none else "–" }}
+    · {{ item.flagged | length }} flagged field{{ "" if item.flagged | length == 1 else "s" }}
+  </p>
+
+  {% if item.screenshot_path %}
+  <a href="/review/{{ item.job_id }}/screenshot" target="_blank">
+    <img src="/review/{{ item.job_id }}/screenshot" alt="Filled form for {{ item.title }}" loading="lazy">
+  </a>
+  {% else %}
+  <p class="muted">No screenshot.</p>
+  {% endif %}
+
+  <h3>Answers</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Field</th><th>Answer</th><th>Source</th><th>Flag</th></tr></thead>
+    <tbody>
+    {% for answer in item.answers %}
+      <tr class="{{ 'flagged' if answer in item.flagged else '' }}">
+        <td>{{ answer.label or answer.field_id }}{% if answer.required %} <span class="muted">(required)</span>{% endif %}</td>
+        <td>{{ display_value(answer.value) }}</td>
+        <td>{{ answer.source }}</td>
+        <td class="flag">{{ answer.flag or ("check drafted text" if answer.source == "drafted" else "") }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h3>CV changes</h3>
+  {% if item.cv_diff %}
+  <pre>{{ item.cv_diff }}</pre>
+  {% else %}
+  <p class="muted">Base CV used unchanged.</p>
+  {% endif %}
+
+  <div class="review-actions">
+    <form method="post" action="/review/{{ item.job_id }}/approve">
+      <button type="submit">Approve and submit</button>
+    </form>
+    <form method="post" action="/review/{{ item.job_id }}/reject">
+      <button type="submit">Reject</button>
+    </form>
+  </div>
+</section>
+{% else %}
+<p class="muted">Nothing to review.</p>
+{% endfor %}
+{% endblock %}

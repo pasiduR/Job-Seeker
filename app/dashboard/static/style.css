@@ -45,3 +45,8 @@ button { cursor: pointer; border-color: var(--accent); color: var(--accent); }
 .error { color: var(--error); }
 .muted { color: var(--muted); }
 pre { white-space: pre-wrap; overflow-x: auto; border: 1px solid var(--line); padding: 8px; }
+.review-item { border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; margin: 16px 0; }
+.review-item img { max-width: 100%; border: 1px solid var(--line); }
+.review-actions { display: flex; gap: 8px; margin-top: 8px; }
+tr.flagged td { background: color-mix(in srgb, var(--error) 10%, transparent); }
+.flag { color: var(--error); }

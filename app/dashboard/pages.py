@@ -15,18 +15,23 @@ from app.config import RuntimeSettings
 from app.dashboard.app import get_repos, templates
 from app.dashboard.repository import DashboardRepos, SearchFilterCreate
 from app.queue.state_machine import JobStatus
+from app.steps.fill import SCREENSHOT_ROOT
+from app.steps.form_mapper import RESUME_UPLOAD
 from app.sources.models import SourceCreate, SourceType
 from app.steps.latex import LatexCompileError, LatexEngineMissing
 from app.triggers.manual import PIPELINE_STEPS
 
 
-RUNNABLE_STATUSES = frozenset({JobStatus.FOUND.value, JobStatus.SCORED.value})
+RUNNABLE_STATUSES = frozenset(
+    {JobStatus.FOUND.value, JobStatus.SCORED.value, JobStatus.TAILORED.value}
+)
 
 
 router = APIRouter()
 
 JOBS_PAGE_LIMIT = 200
 RUN_LOG_LIMIT = 200
+REVIEW_PAGE_LIMIT = 50
 
 
 def _redirect(path: str, *, message: str | None = None, error: str | None = None) -> Response:
@@ -232,6 +237,41 @@ def jobs_page(
         pipeline_steps=PIPELINE_STEPS,
         runnable_statuses=RUNNABLE_STATUSES,
     )
+
+
+# --- Review queue ------------------------------------------------------------
+
+
+def _display_value(value: Any) -> str:
+    if value == RESUME_UPLOAD:
+        return "Tailored CV (PDF)"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return "" if value is None else str(value)
+
+
+@router.get("/review", response_class=HTMLResponse)
+def review_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    return _render(
+        request,
+        "review.html",
+        items=repos.store.list_review_items(limit=REVIEW_PAGE_LIMIT),
+        display_value=_display_value,
+    )
+
+
+@router.get("/review/{job_id}/screenshot")
+def review_screenshot(job_id: int, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    stored = repos.store.get_screenshot_path(job_id)
+    if not stored:
+        return Response("Screenshot not found", status_code=404)
+    path = Path(stored).resolve()
+    # Only serve files the filler wrote under the screenshot directory.
+    if not path.is_relative_to(SCREENSHOT_ROOT.resolve()) or not path.is_file():
+        return Response("Screenshot not found", status_code=404)
+    return FileResponse(path, media_type="image/png")
 
 
 # --- Manual triggers ---------------------------------------------------------

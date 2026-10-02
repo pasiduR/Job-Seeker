@@ -56,6 +56,26 @@ class JobRow:
 
 
 @dataclass(frozen=True)
+class ReviewItem:
+    job_id: int
+    title: str
+    company: str
+    url: str
+    score: int | None
+    answers: list[dict[str, Any]]
+    screenshot_path: str | None
+    cv_diff: str | None  # None when the base CV is used unchanged
+
+    @property
+    def flagged(self) -> list[dict[str, Any]]:
+        return [
+            answer
+            for answer in self.answers
+            if answer.get("flag") or answer.get("source") in {"drafted", "unknown"}
+        ]
+
+
+@dataclass(frozen=True)
 class SkillRow:
     job_id: int
     job_title: str
@@ -105,6 +125,10 @@ class DashboardStore(Protocol):
     ) -> list[JobRow]: ...
 
     def list_skills(self) -> list[SkillRow]: ...
+
+    def list_review_items(self, *, limit: int) -> list[ReviewItem]: ...
+
+    def get_screenshot_path(self, job_id: int) -> str | None: ...
 
     def list_run_logs(self, *, limit: int) -> list[RunLogRow]: ...
 
@@ -263,6 +287,40 @@ class PostgresDashboardStore:
             )
             for row in rows
         ]
+
+    def list_review_items(self, *, limit: int) -> list[ReviewItem]:
+        rows = self._rows(
+            """
+            SELECT j.id, j.title, j.company, j.url, j.score, f.answers,
+                   f.screenshot_path, c.diff_from_base
+            FROM jobs j
+            JOIN form_fills f ON f.job_id = j.id AND f.outcome = 'filled'
+            LEFT JOIN cv_versions c ON c.job_id = j.id
+            WHERE j.status = 'filled'
+            ORDER BY j.updated_at, j.id
+            LIMIT %s
+            """,
+            (limit,),
+        )
+        return [
+            ReviewItem(
+                job_id=int(row[0]),
+                title=str(row[1]),
+                company=str(row[2]),
+                url=str(row[3]),
+                score=row[4],
+                answers=list(json.loads(row[5]) if isinstance(row[5], str) else row[5]),
+                screenshot_path=row[6],
+                cv_diff=row[7],
+            )
+            for row in rows
+        ]
+
+    def get_screenshot_path(self, job_id: int) -> str | None:
+        rows = self._rows(
+            "SELECT screenshot_path FROM form_fills WHERE job_id = %s", (job_id,)
+        )
+        return rows[0][0] if rows else None
 
     def list_skills(self) -> list[SkillRow]:
         rows = self._rows(
