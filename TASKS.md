@@ -56,7 +56,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/llm/prompts/scorer_v1.md`, `app/steps/scorer.py`, `tests/test_scorer.py`, `tests/fixtures/scorer_cases.json`, added validated scoring, persisted score details, and threshold-driven runner decisions.
 
 ### CV Tailor
-- [ ] Base CV (LaTeX) stored in the DB and compiled once to a base PDF
+- [x] Base CV (LaTeX) stored in the DB and compiled once to a base PDF
+  - Done: `app/steps/latex.py`, `app/steps/base_cv.py`, `tests/test_base_cv.py`, `tests/fixtures/base_cv.tex`, added a sandboxed tectonic/pdflatex compiler, LaTeX-to-text extraction, and base-CV storage that recompiles only when the LaTeX or its PDF changes.
 - [ ] `prompts/tailor_v1.md` and `steps/tailor.py`: skip tailoring if the base CV scores at or above the threshold; otherwise reorder and reword existing content
 - [ ] Code checks: reject output if it adds new employers, projects, degrees, dates, or metrics (entity diff); enforce the `added_skills` limits (≤ M, `est_days` ≤ N); apply the placement toggle
 - [ ] Compile with `tectonic` or `pdflatex`; on error make one LLM fix attempt, then mark the job `failed`
