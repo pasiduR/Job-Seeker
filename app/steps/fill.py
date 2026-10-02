@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from app.browser.page import FormPage
 from app.browser.stop_conditions import site_of
@@ -35,6 +35,22 @@ def application_url(job_url: str) -> str:
     if host == "jobs.ashbyhq.com" and not path.endswith("/application"):
         return f"{parts.scheme}://{host}{path}/application"
     return job_url
+
+
+def application_form_url(
+    job_url: str, *, source_job_id: str | None, ats: tuple[str, str] | None
+) -> str:
+    """The direct form URL. Greenhouse postings often live on company career
+    sites; the board's embed form is the same form without the site around it."""
+
+    if ats is not None and source_job_id:
+        provider, board = ats
+        if provider == "greenhouse":
+            return (
+                "https://job-boards.greenhouse.io/embed/job_app"
+                f"?for={quote(board, safe='')}&token={quote(source_job_id, safe='')}"
+            )
+    return application_url(job_url)
 
 
 def answers_json(answers: Iterable[FieldAnswer]) -> list[dict[str, Any]]:

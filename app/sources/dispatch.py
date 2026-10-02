@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -64,16 +65,22 @@ _ATS_HOSTS = {
 def ats_target(source: Source) -> tuple[str, str]:
     """(provider, board) from explicit config, else from the board URL."""
 
-    provider = source.config.get("provider")
-    board = source.config.get("board")
+    return ats_target_from(source.url, source.config, name=source.name)
+
+
+def ats_target_from(
+    url: str, config: Mapping[str, object], *, name: str
+) -> tuple[str, str]:
+    provider = config.get("provider")
+    board = config.get("board")
     if isinstance(provider, str) and isinstance(board, str) and board:
         return provider, board
-    parts = urlsplit(source.url)
+    parts = urlsplit(url)
     inferred = _ATS_HOSTS.get(parts.hostname or "")
     segments = [segment for segment in parts.path.split("/") if segment]
     if inferred is None or not segments:
         raise UnsupportedSource(
-            f"Cannot determine ATS provider and board for source {source.name!r}; "
+            f"Cannot determine ATS provider and board for source {name!r}; "
             'set config {"provider": ..., "board": ...}'
         )
     return inferred, segments[0]

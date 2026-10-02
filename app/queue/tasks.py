@@ -18,13 +18,18 @@ from app.queue.pipeline_runner import (
 )
 from app.queue.postgres import QueueItem
 from app.queue.state_machine import JobStatus
-from app.sources.dispatch import SourceDispatcher, depends_on_filter
+from app.sources.dispatch import (
+    SourceDispatcher,
+    UnsupportedSource,
+    ats_target_from,
+    depends_on_filter,
+)
 from app.sources.finder import DiscoveryCriteria, SourceFinder
 from app.sources.models import Source, SourceRepository, SourceType
 from app.sources.scraper import ScraperService, SearchFilter
 from app.sources.types import JobListing
 from app.steps.base_cv import BaseCVService, CVVersion
-from app.steps.fill import FillService
+from app.steps.fill import FillService, application_form_url
 from app.steps.submit import SubmitService
 from app.steps.latex import latex_to_text
 from app.steps.scorer import Scorer
@@ -56,6 +61,7 @@ class WorkerJob:
     description: str
     score: int | None
     url: str = ""
+    form_url: str = ""
 
 
 class WorkerStore(Protocol):
@@ -133,13 +139,31 @@ class PostgresWorkerStore:
 
     def get_job(self, job_id: int) -> WorkerJob:
         rows = self._rows(
-            "SELECT id, description, score, url FROM jobs WHERE id = %s", (job_id,)
+            """
+            SELECT j.id, j.description, j.score, j.url, j.source_job_id,
+                   s.type, s.url, s.config, s.name
+            FROM jobs j LEFT JOIN sources s ON s.id = j.source_id
+            WHERE j.id = %s
+            """,
+            (job_id,),
         )
         if not rows:
             raise LookupError(f"Job {job_id} does not exist")
         row = rows[0]
+        ats: tuple[str, str] | None = None
+        if row[5] == SourceType.ATS_BOARD.value:
+            try:
+                ats = ats_target_from(str(row[6]), row[7] or {}, name=str(row[8]))
+            except UnsupportedSource:
+                ats = None
         return WorkerJob(
-            id=int(row[0]), description=str(row[1]), score=row[2], url=str(row[3])
+            id=int(row[0]),
+            description=str(row[1]),
+            score=row[2],
+            url=str(row[3]),
+            form_url=application_form_url(
+                str(row[3]), source_job_id=row[4], ats=ats
+            ),
         )
 
     def get_profile(self) -> dict[str, Any]:
@@ -440,7 +464,7 @@ class PipelineTasks:
         job = self._store.get_job(job_id)
         return self._filler.run(
             job_id=job_id,
-            job_url=job.url,
+            job_url=job.form_url or job.url,
             profile=self._store.get_profile(),
             cv=self._store.cv_for_job(job_id) or base,
         )
