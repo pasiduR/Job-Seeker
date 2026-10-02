@@ -1,0 +1,16 @@
+[
+  {
+    "score": 8,
+    "reasons": ["Python and API experience match the role"],
+    "missing_skills": ["Kubernetes"],
+    "threshold": 7,
+    "expected_status": "scored"
+  },
+  {
+    "score": 5,
+    "reasons": ["Required infrastructure experience is missing"],
+    "missing_skills": ["Kubernetes", "Terraform"],
+    "threshold": 7,
+    "expected_status": "skipped"
+  }
+]

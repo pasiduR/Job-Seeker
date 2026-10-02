@@ -52,7 +52,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/sources/finder.py`, `tests/test_source_finder.py`, `tests/fixtures/source_candidates.json`, added configured-type discovery, a supported public catalog, typed provider results, and repository-backed dedupe.
 
 ### Scorer
-- [ ] `prompts/scorer_v1.md` and `steps/scorer.py`, which return a 1–10 score with reasons and missing skills; jobs below the threshold become `skipped`
+- [x] `prompts/scorer_v1.md` and `steps/scorer.py`, which return a 1–10 score with reasons and missing skills; jobs below the threshold become `skipped`
+  - Done: `app/llm/prompts/scorer_v1.md`, `app/steps/scorer.py`, `tests/test_scorer.py`, `tests/fixtures/scorer_cases.json`, added validated scoring, persisted score details, and threshold-driven runner decisions.
 
 ### CV Tailor
 - [ ] Base CV (LaTeX) stored in the DB and compiled once to a base PDF
