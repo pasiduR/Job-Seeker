@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Sources{% endblock %}
+{% block content %}
+<h1>Sources</h1>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Type</th><th>URL</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for source in sources %}
+    <tr>
+      <td>{{ source.name }}</td>
+      <td>{{ source.type.value }}</td>
+      <td><a href="{{ source.url | http_url }}" rel="noreferrer noopener" target="_blank">{{ source.url }}</a></td>
+      <td>{{ "active" if source.active else "disabled" }}</td>
+      <td>
+        <form class="inline" method="post" action="/sources/{{ source.id }}/active">
+          <input type="hidden" name="active" value="{{ 'false' if source.active else 'true' }}">
+          <button type="submit">{{ "Disable" if source.active else "Enable" }}</button>
+        </form>
+        <form class="inline" method="post" action="/sources/{{ source.id }}/delete">
+          <button type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No sources yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Add source</h2>
+<form class="stack" method="post" action="/sources">
+  <label>Name <input name="name" required></label>
+  <label>Type
+    <select name="type">
+      {% for source_type in source_types %}<option>{{ source_type }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>URL <input name="url" type="url" required></label>
+  <label>Config (JSON, no secrets) <textarea name="config" rows="3" placeholder="{}"></textarea></label>
+  <button type="submit">Add source</button>
+</form>
+{% endblock %}

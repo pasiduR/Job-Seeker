@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Base CV + profile{% endblock %}
+{% block content %}
+<h1>Base CV + profile</h1>
+
+<h2>Base CV (LaTeX)</h2>
+{% if base_pdf_ready %}
+<p><a href="/cv/base.pdf">Download compiled base PDF</a></p>
+{% elif base %}
+<p class="muted">The base PDF is missing; save again to recompile.</p>
+{% endif %}
+<form class="stack" method="post" action="/cv/base">
+  <textarea name="tex" rows="24" required spellcheck="false">{{ base.tex if base else "" }}</textarea>
+  <button type="submit">Save and compile</button>
+</form>
+
+<h2>Profile</h2>
+<p class="muted">JSON object used by the form mapper. Legal, visa, salary, and demographic answers come only from here.</p>
+<form class="stack" method="post" action="/cv/profile">
+  <textarea name="profile" rows="16" required spellcheck="false">{{ profile_json }}</textarea>
+  <button type="submit">Save profile</button>
+</form>
+{% endblock %}

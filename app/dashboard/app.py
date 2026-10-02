@@ -22,6 +22,15 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+
+def http_url(value: str) -> str:
+    """Scraped URLs are untrusted: only link to http(s) targets."""
+
+    return value if urlsplit(value).scheme in {"http", "https"} else "#"
+
+
+templates.env.filters["http_url"] = http_url
+
 RepoFactory = Callable[[], AbstractContextManager[Any]]
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})

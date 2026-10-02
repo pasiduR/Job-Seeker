@@ -3,12 +3,35 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 import uvicorn
+from psycopg_pool import ConnectionPool
 
 from app.config import SecretSettings
 from app.dashboard.app import DashboardCredentials, create_app
-from app.db.connection import open_pool, pooled_connection
+from app.dashboard.pages import router as pages_router
+from app.dashboard.repository import DashboardRepos, PostgresDashboardStore
+from app.db.connection import open_pool
+from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
+from app.steps.latex import LatexCompiler
+
+
+def repo_factory(pool: ConnectionPool):  # type: ignore[no-untyped-def]
+    compiler = LatexCompiler()
+
+    @contextmanager
+    def open_repos() -> Iterator[DashboardRepos]:
+        with pool.connection() as connection:
+            yield DashboardRepos(
+                store=PostgresDashboardStore(connection),
+                base_cv=BaseCVService(
+                    store=PostgresBaseCVStore(connection), compiler=compiler
+                ),
+            )
+
+    return open_repos
 
 
 def main() -> None:
@@ -25,11 +48,12 @@ def main() -> None:
 
     pool = open_pool(secrets.database_url.get_secret_value())
     app = create_app(
-        repo_factory=lambda: pooled_connection(pool),
+        repo_factory=repo_factory(pool),
         credentials=DashboardCredentials(
             username=secrets.dashboard_username,
             password=secrets.dashboard_password,
         ),
+        routers=(pages_router,),
     )
     uvicorn.run(app, host=args.host, port=args.port, proxy_headers=True)
 

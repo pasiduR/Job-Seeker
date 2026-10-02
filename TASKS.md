@@ -70,7 +70,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### Dashboard v1
 - [x] Web app and API foundation
   - Done: `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/dashboard/templates/`, `app/dashboard/static/style.css`, `app/db/connection.py`, `app/config.py`, `pyproject.toml`, `.env.example`, `tests/test_dashboard_app.py`, added a FastAPI + Jinja2 app factory with HTTP Basic auth from `.env`, same-origin checks on writes, security headers, per-request repositories, and a pooled-connection entry point.
-- [ ] Pages: Sources, Search filters, Base CV + profile editor, Jobs list (status, score, filters), Skills to learn, Run logs, Settings
+- [x] Pages: Sources, Search filters, Base CV + profile editor, Jobs list (status, score, filters), Skills to learn, Run logs, Settings
+  - Done: `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/templates/*.html`, `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/db/connection.py`, `tests/test_dashboard_pages.py`, `tests/fixtures/dashboard_data.json`, added server-rendered pages with validated forms (sources, filters, base CV compile + PDF download, profile JSON, settings), job status/score filtering, and http(s)-only links for scraped URLs.
 - [ ] "Run now" (full pipeline or a single step) and a "Run for this job" button on each job row
 
 ### Tests and evals

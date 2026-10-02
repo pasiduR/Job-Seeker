@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<form class="stack" method="post" action="/settings">
+  {% for field in fields %}
+    {% if field.kind == "bool" %}
+    <label><span><input type="checkbox" name="{{ field.name }}" {% if field.value %}checked{% endif %}> {{ field.name }}</span></label>
+    {% elif field.kind == "choice" %}
+    <label>{{ field.name }}
+      <select name="{{ field.name }}">
+        {% for option in field.options %}
+        <option value="{{ option }}" {% if option == field.value %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% else %}
+    <label>{{ field.name }} <input type="number" name="{{ field.name }}" value="{{ field.value }}" required></label>
+    {% endif %}
+  {% endfor %}
+  <button type="submit">Save settings</button>
+</form>
+{% endblock %}

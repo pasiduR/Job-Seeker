@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Search filters{% endblock %}
+{% block content %}
+<h1>Search filters</h1>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Name</th><th>Roles</th><th>Locations</th><th>Remote</th><th>Exclude</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for filter in filters %}
+    <tr>
+      <td>{{ filter.name }}</td>
+      <td>{{ filter.roles | join(", ") }}</td>
+      <td>{{ filter.locations | join(", ") }}</td>
+      <td>{{ "any" if filter.remote is none else ("yes" if filter.remote else "no") }}</td>
+      <td>{{ filter.exclude_keywords | join(", ") }}</td>
+      <td>{{ "active" if filter.active else "disabled" }}</td>
+      <td>
+        <form class="inline" method="post" action="/filters/{{ filter.id }}/active">
+          <input type="hidden" name="active" value="{{ 'false' if filter.active else 'true' }}">
+          <button type="submit">{{ "Disable" if filter.active else "Enable" }}</button>
+        </form>
+        <form class="inline" method="post" action="/filters/{{ filter.id }}/delete">
+          <button type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No search filters yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Add filter</h2>
+<form class="stack" method="post" action="/filters">
+  <label>Name <input name="name" required></label>
+  <label>Roles (comma-separated) <input name="roles"></label>
+  <label>Locations (comma-separated) <input name="locations"></label>
+  <label>Remote
+    <select name="remote">
+      <option value="any">any</option>
+      <option value="yes">remote only</option>
+      <option value="no">on-site only</option>
+    </select>
+  </label>
+  <label>Exclude keywords (comma-separated) <input name="exclude_keywords"></label>
+  <button type="submit">Add filter</button>
+</form>
+{% endblock %}

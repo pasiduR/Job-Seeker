@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Skills to learn{% endblock %}
+{% block content %}
+<h1>Skills to learn</h1>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Skill</th><th>Est. days</th><th>Plan</th><th>For job</th></tr></thead>
+  <tbody>
+  {% for skill in skills %}
+    <tr>
+      <td>{{ skill.skill }}</td>
+      <td>{{ skill.estimated_days }}</td>
+      <td>{{ skill.learning_plan }}</td>
+      <td>{{ skill.job_title }} · {{ skill.company }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4" class="muted">No skills added to tailored CVs yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
