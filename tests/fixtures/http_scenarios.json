@@ -1,0 +1,5 @@
+{
+  "transient_then_success": [503, 429, 200],
+  "permanent_failure": [400],
+  "retry_after_seconds": 3
+}

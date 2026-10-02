@@ -22,7 +22,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/queue/state_machine.py`, `tests/test_state_machine.py`, `tests/fixtures/status_transitions.json`, added pure idempotent transition functions and rejection of invalid workflow jumps.
 - [x] Postgres-backed queue, worker, and `pipeline_runner` with locking so runs never overlap or repeat, plus `run_logs` entries
   - Done: `app/queue/postgres.py`, `app/queue/worker.py`, `app/queue/pipeline_runner.py`, `tests/test_queue.py`, `tests/fixtures/queue_job.json`, added atomic queue claims, contained retries, advisory run locking, status ownership, and run logging.
-- [ ] Shared HTTP helper with timeout, retry with backoff (max 3), and per-source rate limiting
+- [x] Shared HTTP helper with timeout, retry with backoff (max 3), and per-source rate limiting
+  - Done: `app/http.py`, `tests/test_http.py`, `tests/fixtures/http_scenarios.json`, added bounded transient retries, per-attempt timeouts, Retry-After handling, and configured per-source pacing.
 
 ### LLM layer
 - [ ] `llm/client.py`: a single wrapper that validates output against a Pydantic schema, retries once with the validation error, logs every call to `llm_calls` (tokens, cost, latency, validity), and wraps untrusted text in delimited data blocks
