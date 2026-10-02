@@ -74,6 +74,8 @@ class RuntimeSettings(BaseModel):
     # Headed by default so CAPTCHAs and logins can be handled by hand.
     browser_headless: bool = False
     browser_timeout_seconds: float = Field(default=30.0, gt=0)
+    # Public base URL of the dashboard, used for links in push notifications.
+    dashboard_url: str = ""
     form_max_steps: int = Field(default=25, ge=1)
     form_max_pages: int = Field(default=6, ge=1)
 

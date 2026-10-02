@@ -120,6 +120,8 @@ def test_filled_form_stores_trace_answers_and_screenshot(
     assert fill_row is not None
     job_id, cv_version_id, status, reason, form_url, answers, screenshot = fill_row
     assert (job_id, cv_version_id, status, screenshot) == (7, 42, "filled", final_shot)
+    review = [params for query, params in connection.queries if query.startswith("INSERT INTO notifications")]
+    assert review and review[0] is not None and review[0][3] == "review"
     stored = {answer["label"]: answer for answer in json.loads(str(answers))}
     assert stored["First name *"]["value"] == "Jane"
     assert stored["Resume *"]["value"] == "@tailored_cv_pdf"

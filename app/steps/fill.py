@@ -193,5 +193,6 @@ class FillService:
             job_id=job_id, cv_version_id=cv.id, form_url=form_url, result=result
         )
         if result.outcome == FillOutcome.FILLED:
+            self._notifications.queue(job_id=job_id, kind="review", payload={})
             return StepOutcome(JobStatus.FILLED)
         return StepOutcome(JobStatus.NEEDS_MANUAL, result.reason)

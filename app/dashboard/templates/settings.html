@@ -19,7 +19,7 @@
       <input name="{{ field.name }}" value="{{ field.value }}">
     </label>
     {% elif field.kind == "text" %}
-    <label>{{ field.name }} <input name="{{ field.name }}" value="{{ field.value }}" required></label>
+    <label>{{ field.name }} <input name="{{ field.name }}" value="{{ field.value }}"></label>
     {% else %}
     <label>{{ field.name }} <input type="number" step="{{ field.step }}" name="{{ field.name }}" value="{{ field.value }}" required></label>
     {% endif %}

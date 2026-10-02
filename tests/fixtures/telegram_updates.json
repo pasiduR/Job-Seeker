@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "result": [
+    {
+      "update_id": 501,
+      "callback_query": {
+        "id": "cb-1",
+        "data": "approve:12",
+        "message": {"message_id": 77, "chat": {"id": 424242}}
+      }
+    },
+    {
+      "update_id": 502,
+      "callback_query": {
+        "id": "cb-2",
+        "data": "approve:13",
+        "message": {"message_id": 78, "chat": {"id": 999}}
+      }
+    },
+    {
+      "update_id": 503,
+      "callback_query": {
+        "id": "cb-3",
+        "data": "submit:12; DROP TABLE jobs",
+        "message": {"message_id": 79, "chat": {"id": 424242}}
+      }
+    },
+    {
+      "update_id": 504,
+      "callback_query": {
+        "id": "cb-4",
+        "data": "reject:14",
+        "message": {"message_id": 80, "chat": {"id": 424242}}
+      }
+    }
+  ]
+}
