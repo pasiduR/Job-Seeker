@@ -59,6 +59,8 @@ class RuntimeSettings(BaseModel):
         "currently_learning"
     )
     auto_submit: bool = False
+    auto_submit_score_threshold: int = Field(default=8, ge=1, le=10)
+    trusted_source_ids: list[int] = Field(default_factory=list)
     automation_timezone: str = "Asia/Colombo"
     watcher_jobspy_min_minutes: int = Field(default=15, ge=15, le=30)
     watcher_ats_min_minutes: int = Field(default=5, ge=5, le=10)
@@ -91,6 +93,13 @@ class RuntimeSettings(BaseModel):
         except (ZoneInfoNotFoundError, ValueError) as exc:
             raise ValueError("Unknown IANA timezone") from exc
         return value
+
+    @field_validator("trusted_source_ids")
+    @classmethod
+    def valid_trusted_sources(cls, value: list[int]) -> list[int]:
+        if any(source_id < 1 for source_id in value):
+            raise ValueError("Trusted source IDs must be positive")
+        return list(dict.fromkeys(value))
 
 
 class AppConfig(BaseModel):

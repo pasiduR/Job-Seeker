@@ -149,8 +149,9 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: `app/triggers/watcher.py`, `app/sources/scraper.py`, `app/sources/dispatch.py`, worker wiring, migration `0004`, settings and watcher tests; atomic job/queue handoff, pending-poll dedupe, active-subscription checks, one-hour JobSpy filtering and configured source minimum intervals; 38 fixture tests passed.
 - [x] Fast-lane flow: score → tailor (only if needed) → fill → notify
   - Done: `app/db/migrations/0005_job_lanes.sql`, watcher and worker tasks, `tests/test_fast_lane.py`, worker fixtures; persisted event-job lane, reused score/tailor/fill and existing review notification flow, preserved fast-lane cap through approval and retry; 41 fixture tests passed.
-- [~] Optional auto-submit (off by default), only when all conditions hold: score ≥ the configured value (default 8), the source is on the trusted list, no flagged fields, and no skills were added
-- [ ] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`
+- [x] Optional auto-submit (off by default), only when all conditions hold: score ≥ the configured value (default 8), the source is on the trusted list, no flagged fields, and no skills were added
+  - Done: `app/steps/auto_submit.py`, `app/config.py`, worker auto-approval transition, `tests/test_auto_submit.py`, `tests/fixtures/auto_submit_facts.json`; default-off, fail-closed guard for score/trusted source/answers/skills, runner-owned approval followed by separate submit; 45 fixture tests passed.
+- [~] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`
 - [ ] Observability on the dashboard: cost per day, failures per step, `needs_manual` reasons
 - [ ] Optional: self-hosted Langfuse trace UI (not a hard dependency)
 - [ ] Tests for schedule triggering, watcher dedupe, and auto-submit conditions

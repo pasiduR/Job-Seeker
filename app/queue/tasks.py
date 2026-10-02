@@ -29,6 +29,7 @@ from app.sources.models import Source, SourceRepository, SourceType
 from app.sources.scraper import ScraperService, SearchFilter
 from app.sources.types import JobListing
 from app.steps.base_cv import BaseCVService, CVVersion
+from app.steps.auto_submit import AutoSubmitFacts, can_auto_submit
 from app.steps.fill import FillService, application_form_url
 from app.steps.submit import Lane, SubmitService
 from app.steps.latex import latex_to_text
@@ -68,6 +69,8 @@ class WorkerJob:
 
 
 class WorkerStore(Protocol):
+    def auto_submit_facts(self, job_id: int) -> AutoSubmitFacts | None: ...
+
     def active_sources(self) -> list[Source]: ...
 
     def active_filters(self) -> list[SearchFilter]: ...
@@ -174,6 +177,20 @@ class PostgresWorkerStore:
     def get_profile(self) -> dict[str, Any]:
         rows = self._rows("SELECT data FROM profile WHERE id = 1")
         return dict(rows[0][0]) if rows else {}
+
+    def auto_submit_facts(self, job_id: int) -> AutoSubmitFacts | None:
+        rows = self._rows("""
+            SELECT j.score, j.source_id, f.answers, f.outcome,
+                   (SELECT count(*) FROM skills_to_learn WHERE job_id = j.id)
+            FROM jobs j JOIN form_fills f ON f.job_id = j.id WHERE j.id = %s
+        """, (job_id,))
+        if not rows:
+            return None
+        import json
+        score, source_id, answers, outcome, count = rows[0]
+        return AutoSubmitFacts(score=score, source_id=source_id,
+                               answers=json.loads(answers) if isinstance(answers, str) else answers,
+                               outcome=outcome, added_skill_count=count)
 
     def cv_for_job(self, job_id: int) -> CVVersion | None:
         """The job's tailored CV; None when it reuses the base CV."""
@@ -419,6 +436,18 @@ class PipelineTasks:
     ) -> None:
         base = self._base_cv.ensure_compiled()
         steps = [self._pipeline_step(step, base, settings) for step in job_steps]
+        if "fill" in job_steps and settings.auto_submit:
+            fill_index = next(i for i, step in enumerate(steps) if step.name == "fill")
+            steps.insert(fill_index + 1, PipelineStep(
+                "auto_approve", frozenset({JobStatus.FILLED}),
+                lambda current_job_id: StepOutcome(
+                    JobStatus.APPROVED if can_auto_submit(self._store.auto_submit_facts(current_job_id), settings)
+                    else JobStatus.FILLED
+                ),
+            ))
+            # A fill-only request still submits immediately when auto-approval is enabled.
+            if "submit" not in job_steps:
+                steps.append(self._submit_step(settings))
         runner = self._runner_factory(steps)
         result = runner.run(run_id=run_id, job_id=job_id, trigger=trigger)
         if result == RunResult.ALREADY_RUNNING:
