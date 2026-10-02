@@ -40,7 +40,9 @@ class MemorySubmitStore:
     def submitted_today(self, lane: str) -> int:
         return self.today + sum(1 for row in self.applications.values() if row["lane"] == lane)
 
-    def reserve(self, *, job_id: int, cv_version_id: int, lane: str) -> bool:
+    def reserve(self, *, job_id: int, cv_version_id: int, lane: str, daily_cap: int) -> bool:
+        if self.submitted_today(lane) >= daily_cap:
+            return False
         if job_id in self.applications:
             return False
         self.applications[job_id] = {"cv_version_id": cv_version_id, "lane": lane, "screenshot": None}
@@ -217,13 +219,15 @@ class ScriptedConnection:
 
 
 def test_postgres_store_reserves_with_the_unique_job_constraint() -> None:
-    connection = ScriptedConnection([[(1,)], []])
+    connection = ScriptedConnection([[], [(1,)], [], []])
     store = PostgresSubmitStore(connection)
 
-    assert store.reserve(job_id=3, cv_version_id=11, lane="batch") is True
-    assert store.reserve(job_id=3, cv_version_id=11, lane="batch") is False
-    assert "ON CONFLICT (job_id) DO NOTHING" in connection.queries[0][0]
-    assert connection.queries[0][1] == (3, 11, "batch")
+    assert store.reserve(job_id=3, cv_version_id=11, lane="batch", daily_cap=10) is True
+    assert store.reserve(job_id=3, cv_version_id=11, lane="batch", daily_cap=10) is False
+    assert "pg_advisory_xact_lock" in connection.queries[0][0]
+    assert "ON CONFLICT (job_id) DO NOTHING" in connection.queries[1][0]
+    assert "= 'approved'" in connection.queries[1][0]
+    assert connection.queries[1][1] == (3, 11, "batch", 3, "batch", "UTC", "UTC", 10)
 
 
 def test_postgres_store_loads_plan_with_click_texts() -> None:

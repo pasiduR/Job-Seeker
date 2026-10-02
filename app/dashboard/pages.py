@@ -394,6 +394,9 @@ def _settings_fields(values: RuntimeSettings) -> list[dict[str, Any]]:
         field: dict[str, Any] = {"name": name, "value": getattr(values, name)}
         if annotation is bool:
             field["kind"] = "bool"
+        elif get_origin(annotation) is dict:
+            field["kind"] = "json"
+            field["value"] = json.dumps(field["value"], sort_keys=True)
         elif get_origin(annotation) is list:
             field["kind"] = "list"
             field["value"] = ", ".join(field["value"])
@@ -425,6 +428,11 @@ async def save_settings(
     for name, info in RuntimeSettings.model_fields.items():
         if info.annotation is bool:
             submitted[name] = name in form
+        elif name in form and get_origin(info.annotation) is dict:
+            try:
+                submitted[name] = json.loads(str(form[name]))
+            except json.JSONDecodeError:
+                return _redirect("/settings", error=f"{name} must be valid JSON")
         elif name in form and get_origin(info.annotation) is list:
             submitted[name] = _split_list(str(form[name]))
         elif name in form:

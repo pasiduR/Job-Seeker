@@ -28,6 +28,8 @@ from app.sources.jobspy import JobSpySource
 from app.sources.models import SourceRepository
 from app.sources.rss import RemoteBoardSource
 from app.sources.scraper import PostgresJobStore, ScraperService
+from app.sources.rate_limit import PostgresRateLimiter
+from app.sources.models import SourceType
 from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
 from app.steps.fill import FillService, PostgresFormFillStore, PostgresNotificationQueue
 from app.steps.form_filler import FillLimits, FormFiller
@@ -121,16 +123,17 @@ def browser_options(settings: RuntimeSettings) -> BrowserOptions:
 def build_tasks(
     connection: Connection, settings: RuntimeSettings, secrets: SecretSettings
 ) -> PipelineTasks:
-    http = HttpClient(
-        timeout_seconds=HTTP_TIMEOUT_SECONDS, source_minimum_intervals={}
-    )
+    limiter = PostgresRateLimiter(connection, settings.source_request_intervals_seconds)
+    http = HttpClient(timeout_seconds=HTTP_TIMEOUT_SECONDS, source_minimum_intervals={}, rate_limiter=limiter)
     pipeline_store = PostgresPipelineStore(connection)
     steps = llm_steps(connection, secrets, settings)
     dispatcher = SourceDispatcher(
         boards=RemoteBoardSource(http), ats=AtsApiSource(http),
-        jobspy=JobSpySource(timeout_seconds=JOBSPY_TIMEOUT_SECONDS),
+        jobspy=JobSpySource(timeout_seconds=JOBSPY_TIMEOUT_SECONDS, rate_limiter=limiter),
         career_pages=steps.career_pages if steps else None,
         email_alerts=email_alerts(secrets), jobspy_results_wanted=settings.jobspy_results_wanted,
+        before_fetch=lambda source: limiter.wait(f"{source.type.value}:{source.id}")
+            if source.type in {SourceType.CAREER_PAGE, SourceType.EMAIL_ALERT} else None,
     )
     return PipelineTasks(
         store=PostgresWorkerStore(connection),
@@ -143,7 +146,7 @@ def build_tasks(
         ),
         runner_factory=lambda job_steps: PipelineRunner(pipeline_store, job_steps),
         submitter=SubmitService(
-            store=PostgresSubmitStore(connection),
+            store=PostgresSubmitStore(connection, timezone_name=settings.automation_timezone),
             open_form=lambda url: open_form_page(browser_options(settings), url),
         ),
         scorer=steps.scorer if steps else None,

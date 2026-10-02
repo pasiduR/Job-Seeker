@@ -151,7 +151,9 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: `app/db/migrations/0005_job_lanes.sql`, watcher and worker tasks, `tests/test_fast_lane.py`, worker fixtures; persisted event-job lane, reused score/tailor/fill and existing review notification flow, preserved fast-lane cap through approval and retry; 41 fixture tests passed.
 - [x] Optional auto-submit (off by default), only when all conditions hold: score ≥ the configured value (default 8), the source is on the trusted list, no flagged fields, and no skills were added
   - Done: `app/steps/auto_submit.py`, `app/config.py`, worker auto-approval transition, `tests/test_auto_submit.py`, `tests/fixtures/auto_submit_facts.json`; default-off, fail-closed guard for score/trusted source/answers/skills, runner-owned approval followed by separate submit; 45 fixture tests passed.
-- [~] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`
-- [ ] Observability on the dashboard: cost per day, failures per step, `needs_manual` reasons
+- [x] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`
+  - Done: submit store/service, `app/sources/rate_limit.py`, shared HTTP/JobSpy pacing, worker configuration, migration `0006`, settings JSON editor, `tests/test_rate_limits.py` and fixtures; atomic per-lane cap reservations, timezone-aware day boundaries and durable request pacing; 58 fixture tests passed.
+- [~] Observability on the dashboard: cost per day, failures per step, `needs_manual` reasons
+- [ ] Serialize source discovery, scraping and subscription polling with pipeline runs so full runs cannot overlap across workers.
 - [ ] Optional: self-hosted Langfuse trace UI (not a hard dependency)
 - [ ] Tests for schedule triggering, watcher dedupe, and auto-submit conditions

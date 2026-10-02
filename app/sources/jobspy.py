@@ -10,6 +10,7 @@ from time import sleep
 from typing import Any
 
 from app.sources.types import JobListing
+from app.http import RateLimiter
 
 
 JobSpyScraper = Callable[..., object]
@@ -26,12 +27,14 @@ class JobSpySource:
         scraper: JobSpyScraper | None = None,
         timeout_seconds: float,
         sleeper: Callable[[float], None] = sleep,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         self._scraper = scraper or _default_scraper
         self._timeout_seconds = timeout_seconds
         self._sleep = sleeper
+        self._rate_limiter = rate_limiter
 
     def search(
         self,
@@ -63,6 +66,9 @@ class JobSpySource:
         result: object | None = None
         last_error: Exception | None = None
         for attempt in range(1, 4):
+            if self._rate_limiter is not None:
+                for site in sites:
+                    self._rate_limiter.wait(f"jobspy:{site}")
             try:
                 result = _call_with_timeout(
                     self._scraper, kwargs, self._timeout_seconds

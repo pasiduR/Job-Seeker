@@ -64,6 +64,9 @@ class RuntimeSettings(BaseModel):
     automation_timezone: str = "Asia/Colombo"
     watcher_jobspy_min_minutes: int = Field(default=15, ge=15, le=30)
     watcher_ats_min_minutes: int = Field(default=5, ge=5, le=10)
+    source_request_intervals_seconds: dict[str, float] = Field(
+        default_factory=lambda: {"*": 2.0, "jobspy": 10.0}
+    )
     batch_daily_cap: int = Field(default=10, ge=0)
     jobspy_results_wanted: int = Field(default=20, ge=1)
     source_finder_types: list[
@@ -100,6 +103,14 @@ class RuntimeSettings(BaseModel):
         if any(source_id < 1 for source_id in value):
             raise ValueError("Trusted source IDs must be positive")
         return list(dict.fromkeys(value))
+
+    @field_validator("source_request_intervals_seconds")
+    @classmethod
+    def valid_intervals(cls, value: dict[str, float]) -> dict[str, float]:
+        import math
+        if "*" not in value or any(not math.isfinite(v) or v <= 0 for v in value.values()):
+            raise ValueError("Request intervals need a * default and positive finite seconds")
+        return value
 
 
 class AppConfig(BaseModel):

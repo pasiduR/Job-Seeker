@@ -56,7 +56,7 @@ class SubmitStore(Protocol):
 
     def submitted_today(self, lane: Lane) -> int: ...
 
-    def reserve(self, *, job_id: int, cv_version_id: int, lane: Lane) -> bool: ...
+    def reserve(self, *, job_id: int, cv_version_id: int, lane: Lane, daily_cap: int) -> bool: ...
 
     def release(self, job_id: int) -> None: ...
 
@@ -72,8 +72,9 @@ class SubmitConnection(Protocol):
 
 
 class PostgresSubmitStore:
-    def __init__(self, connection: SubmitConnection) -> None:
+    def __init__(self, connection: SubmitConnection, *, timezone_name: str = "UTC") -> None:
         self._connection = connection
+        self._timezone_name = timezone_name
 
     def _rows(self, query: str, params: tuple[object, ...]) -> list[tuple[Any, ...]]:
         with self._connection.transaction():
@@ -116,23 +117,28 @@ class PostgresSubmitStore:
         rows = self._rows(
             """
             SELECT count(*) FROM applications
-            WHERE lane = %s AND submitted_at >= date_trunc('day', now())
+            WHERE lane = %s AND submitted_at >=
+                (date_trunc('day', now() AT TIME ZONE %s) AT TIME ZONE %s)
             """,
-            (lane,),
+            (lane, self._timezone_name, self._timezone_name),
         )
         return int(rows[0][0])
 
-    def reserve(self, *, job_id: int, cv_version_id: int, lane: Lane) -> bool:
-        rows = self._rows(
-            """
-            INSERT INTO applications (job_id, cv_version_id, lane)
-            VALUES (%s, %s, %s)
-            ON CONFLICT (job_id) DO NOTHING
-            RETURNING id
-            """,
-            (job_id, cv_version_id, lane),
-        )
-        return bool(rows)
+    def reserve(self, *, job_id: int, cv_version_id: int, lane: Lane, daily_cap: int) -> bool:
+        with self._connection.transaction():
+            # Count + reservation is serialized per lane, including across workers.
+            self._connection.execute("SELECT pg_advisory_xact_lock(%s)",
+                                     (1_906_151_934 if lane == "batch" else 1_906_151_935,))
+            rows = list(self._connection.execute("""
+                INSERT INTO applications (job_id, cv_version_id, lane)
+                SELECT %s, %s, %s WHERE
+                    (SELECT status FROM jobs WHERE id = %s) = 'approved'
+                    AND (SELECT count(*) FROM applications WHERE lane = %s AND submitted_at >=
+                        (date_trunc('day', now() AT TIME ZONE %s) AT TIME ZONE %s)) < %s
+                ON CONFLICT (job_id) DO NOTHING RETURNING id
+            """, (job_id, cv_version_id, lane, job_id, lane, self._timezone_name,
+                   self._timezone_name, daily_cap)))
+            return bool(rows)
 
     def release(self, job_id: int) -> None:
         self._rows("DELETE FROM applications WHERE job_id = %s RETURNING id", (job_id,))
@@ -169,7 +175,9 @@ class SubmitService:
         if self._store.submitted_today(lane) >= daily_cap:
             # Stays approved; a later run submits it once the cap resets.
             return StepOutcome(JobStatus.APPROVED, f"{lane} daily cap of {daily_cap} reached")
-        if not self._store.reserve(job_id=job_id, cv_version_id=plan.cv_version_id, lane=lane):
+        if not self._store.reserve(job_id=job_id, cv_version_id=plan.cv_version_id, lane=lane, daily_cap=daily_cap):
+            if self._store.submitted_today(lane) >= daily_cap:
+                return StepOutcome(JobStatus.APPROVED, f"{lane} daily cap of {daily_cap} reached")
             return StepOutcome(
                 JobStatus.NEEDS_MANUAL, "an application is already recorded for this job"
             )
@@ -249,4 +257,3 @@ def _take_answer(unused: list[dict[str, Any]], form_field: FormField) -> dict[st
         if answer["label"] == form_field.label and answer["type"] == form_field.type:
             return unused.pop(index)
     return None
-

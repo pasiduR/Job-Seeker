@@ -9,7 +9,7 @@ import urllib.request
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from time import monotonic, sleep
-from typing import Any
+from typing import Any, Protocol
 
 
 MAX_ATTEMPTS = 3
@@ -47,6 +47,10 @@ class HttpStatusError(HttpRequestError):
 Transport = Callable[[HttpRequest, float], HttpResponse]
 Sleeper = Callable[[float], None]
 Clock = Callable[[], float]
+
+
+class RateLimiter(Protocol):
+    def wait(self, source: str) -> None: ...
 
 
 class SourceRateLimiter:
@@ -89,13 +93,14 @@ class HttpClient:
         transport: Transport | None = None,
         sleeper: Sleeper = sleep,
         clock: Clock = monotonic,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         self._timeout_seconds = timeout_seconds
         self._transport = transport or _urllib_transport
         self._sleep = sleeper
-        self._rate_limiter = SourceRateLimiter(
+        self._rate_limiter = rate_limiter or SourceRateLimiter(
             source_minimum_intervals,
             sleeper=sleeper,
             clock=clock,

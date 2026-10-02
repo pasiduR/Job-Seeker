@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -102,6 +102,7 @@ class SourceDispatcher:
         career_pages: CareerPages | None = None,
         email_alerts: EmailAlerts | None = None,
         jobspy_results_wanted: int,
+        before_fetch: Callable[[Source], None] | None = None,
     ) -> None:
         self._boards = boards
         self._ats = ats
@@ -109,8 +110,11 @@ class SourceDispatcher:
         self._career_pages = career_pages
         self._email_alerts = email_alerts
         self._jobspy_results_wanted = jobspy_results_wanted
+        self._before_fetch = before_fetch
 
     def fetch(self, source: Source, search_filter: SearchFilter, *, hours_old: int | None = None) -> list[JobListing]:
+        if self._before_fetch is not None:
+            self._before_fetch(source)
         company = str(source.config.get("company") or source.name)
         if source.type == SourceType.JOB_BOARD:
             return self._job_board(source, search_filter, hours_old=hours_old)

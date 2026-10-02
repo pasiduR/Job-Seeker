@@ -18,6 +18,10 @@
     <label>{{ field.name }} (comma-separated: {{ field.options | join(", ") }})
       <input name="{{ field.name }}" value="{{ field.value }}">
     </label>
+    {% elif field.kind == "json" %}
+    <label>{{ field.name }} (JSON: exact source key, provider prefix, or * default)
+      <textarea name="{{ field.name }}">{{ field.value }}</textarea>
+    </label>
     {% elif field.kind == "text" %}
     <label>{{ field.name }} <input name="{{ field.name }}" value="{{ field.value }}"></label>
     {% else %}
