@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Python Engineer",
+    "company": "Example Co",
+    "url": "https://jobs.example.com/python?utm_source=feed",
+    "description": "Build Python services.",
+    "location": "Remote - Europe",
+    "remote": true,
+    "source_name": "fixture"
+  },
+  {
+    "title": "Python Engineer Duplicate URL",
+    "company": "Another Co",
+    "url": "https://jobs.example.com/python/",
+    "description": "Build APIs.",
+    "location": "Remote - Europe",
+    "remote": true,
+    "source_name": "fixture"
+  },
+  {
+    "title": "Python Engineer",
+    "company": "Example Co",
+    "url": "https://jobs.example.com/python-copy",
+    "description": "Build Python services.",
+    "location": "Remote - Europe",
+    "remote": true,
+    "source_name": "fixture"
+  },
+  {
+    "title": "Python Consultant",
+    "company": "Agency Co",
+    "url": "https://jobs.example.com/consultant",
+    "description": "A staffing agency contract role.",
+    "location": "Remote - Europe",
+    "remote": true,
+    "source_name": "fixture"
+  },
+  {
+    "title": "Product Designer",
+    "company": "Design Co",
+    "url": "https://jobs.example.com/designer",
+    "description": "Design product interfaces.",
+    "location": "Remote - Europe",
+    "remote": true,
+    "source_name": "fixture"
+  }
+]

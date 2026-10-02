@@ -46,7 +46,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/sources/email_alert.py`, `tests/test_email_alert.py`, `tests/fixtures/linkedin_alert.eml`, added timeout/retry IMAP ingestion and canonical LinkedIn alert-link parsing without page scraping.
 - [x] `sources/career_page.py`: fetch with Crawl4AI or Playwright, then LLM listing extraction (`listing_extract_v1.md`)
   - Done: `app/sources/career_page.py`, `app/llm/prompts/listing_extract_v1.md`, `tests/test_career_page.py`, `tests/fixtures/career_page.txt`, added bounded Playwright page reads and schema-validated listing extraction.
-- [ ] Scraper service that applies `search_filters` (roles, locations, remote, exclude keywords), dedupes by URL and by (company, title), and saves jobs as `found`
+- [x] Scraper service that applies `search_filters` (roles, locations, remote, exclude keywords), dedupes by URL and by (company, title), and saves jobs as `found`
+  - Done: `app/sources/scraper.py`, `tests/test_scraper.py`, `tests/fixtures/scraped_jobs.json`, added deterministic filters, canonical URL and company/title dedupe, and idempotent `found` persistence.
 - [ ] Source Finder service that discovers platforms and career pages for the configured source types and saves new ones
 
 ### Scorer
