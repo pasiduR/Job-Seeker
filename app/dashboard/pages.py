@@ -61,6 +61,38 @@ def _validation_message(exc: ValidationError) -> str:
 # --- Sources -----------------------------------------------------------------
 
 
+@router.get("/subscriptions", response_class=HTMLResponse)
+def subscriptions_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    return _render(request, "subscriptions.html", subscriptions=repos.store.list_subscriptions(),
+                   sources=[s for s in repos.store.list_sources() if s.active],
+                   filters=[f for f in repos.store.list_filters() if f.active])
+
+
+@router.post("/subscriptions")
+def create_subscription(source_id: int = Form(...), search_filter_id: int = Form(...),
+                        polling_interval_minutes: int = Form(10), repos: DashboardRepos = Depends(get_repos)) -> Response:
+    from app.triggers.subscriptions import SubscriptionCreate
+    try:
+        values = SubscriptionCreate(source_id=source_id, search_filter_id=search_filter_id,
+                                    polling_interval_minutes=polling_interval_minutes)
+    except ValidationError as exc:
+        return _redirect("/subscriptions", error=_validation_message(exc))
+    created = repos.store.create_subscription(values)
+    return _redirect("/subscriptions", message="Subscription added" if created else "Subscription exists or source/filter is unavailable")
+
+
+@router.post("/subscriptions/{subscription_id}/active")
+def set_subscription_active(subscription_id: int, active: bool = Form(...), repos: DashboardRepos = Depends(get_repos)) -> Response:
+    changed = repos.store.set_subscription_active(subscription_id, active)
+    return _redirect("/subscriptions", message="Subscription updated" if changed else "Subscription not found")
+
+
+@router.post("/subscriptions/{subscription_id}/delete")
+def delete_subscription(subscription_id: int, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    changed = repos.store.delete_subscription(subscription_id)
+    return _redirect("/subscriptions", message="Subscription removed" if changed else "Subscription not found")
+
+
 @router.get("/schedules", response_class=HTMLResponse)
 def schedules_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
     settings = RuntimeSettings.model_validate(repos.store.read_settings())

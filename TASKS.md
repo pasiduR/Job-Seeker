@@ -143,8 +143,9 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: `app/triggers/scheduler.py`, `app/config.py`, dashboard repository/pages/templates, `tests/test_scheduler.py`, `tests/fixtures/schedules.json`; validated numeric cron, timezone-aware matching, atomic queue/cursor writes and dashboard CRUD; 34 fixture tests passed.
 - [!] VPS deployment: systemd units or timers for the scheduler, the worker, and the watcher
   - Blocked: local `deploy/systemd/` units/timers and `deploy/README.md` prepared; two fixture tests pass. Actual installation needs VPS host/access, target domain/paths and your explicit deployment approval; Linux systemd/runtime validation is pending.
-- [ ] Subscriptions page (source, search filter, polling interval with a 10 min default)
-- [ ] Watcher detection for each source: alert emails, jobspy with a "posted within the last hour" filter every 15–30 min, ATS JSON APIs every 5–10 min, and RSS polling; a new match starts that job's pipeline right away
+- [x] Subscriptions page (source, search filter, polling interval with a 10 min default)
+  - Done: `app/triggers/subscriptions.py`, dashboard repository/pages/templates, `tests/test_subscriptions.py`, `tests/fixtures/subscription.json`; authenticated subscription controls with validated source/filter IDs and 10-minute default; 34 fixture tests passed.
+- [~] Watcher detection for each source: alert emails, jobspy with a "posted within the last hour" filter every 15–30 min, ATS JSON APIs every 5–10 min, and RSS polling; a new match starts that job's pipeline right away
 - [ ] Fast-lane flow: score → tailor (only if needed) → fill → notify
 - [ ] Optional auto-submit (off by default), only when all conditions hold: score ≥ the configured value (default 8), the source is on the trusted list, no flagged fields, and no skills were added
 - [ ] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`

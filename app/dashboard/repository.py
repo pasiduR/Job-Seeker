@@ -17,6 +17,7 @@ from app.steps.base_cv import BaseCVService, CVVersion, PostgresBaseCVStore
 from app.triggers.manual import ManualTrigger
 from app.triggers.review import ReviewDecisions
 from app.triggers.scheduler import ScheduleCreate
+from app.triggers.subscriptions import SubscriptionCreate
 
 
 class SearchFilterCreate(BaseModel):
@@ -100,6 +101,14 @@ class RunLogRow:
 
 
 class DashboardStore(Protocol):
+    def list_subscriptions(self) -> list[dict[str, Any]]: ...
+
+    def create_subscription(self, values: SubscriptionCreate) -> bool: ...
+
+    def set_subscription_active(self, subscription_id: int, active: bool) -> bool: ...
+
+    def delete_subscription(self, subscription_id: int) -> bool: ...
+
     def list_schedules(self) -> list[dict[str, Any]]: ...
 
     def create_schedule(self, values: ScheduleCreate) -> bool: ...
@@ -185,6 +194,29 @@ class PostgresDashboardStore:
 
     def list_sources(self) -> list[Source]:
         return self._sources.list()
+
+    def list_subscriptions(self) -> list[dict[str, Any]]:
+        columns = ("id", "source_name", "filter_name", "polling_interval_minutes", "active", "last_polled_at", "source_active", "filter_active")
+        return [dict(zip(columns, row)) for row in self._rows("""
+            SELECT sub.id, s.name, f.name, sub.polling_interval_minutes, sub.active,
+                   sub.last_polled_at, s.active, f.active
+            FROM subscriptions sub JOIN sources s ON s.id = sub.source_id
+            JOIN search_filters f ON f.id = sub.search_filter_id ORDER BY sub.id
+        """)]
+
+    def create_subscription(self, values: SubscriptionCreate) -> bool:
+        return self._changed("""
+            INSERT INTO subscriptions (source_id, search_filter_id, polling_interval_minutes)
+            SELECT s.id, f.id, %s FROM sources s CROSS JOIN search_filters f
+            WHERE s.id = %s AND f.id = %s AND s.active AND f.active
+            ON CONFLICT (source_id, search_filter_id) DO NOTHING RETURNING id
+        """, (values.polling_interval_minutes, values.source_id, values.search_filter_id))
+
+    def set_subscription_active(self, subscription_id: int, active: bool) -> bool:
+        return self._changed("UPDATE subscriptions SET active = %s WHERE id = %s RETURNING id", (active, subscription_id))
+
+    def delete_subscription(self, subscription_id: int) -> bool:
+        return self._changed("DELETE FROM subscriptions WHERE id = %s RETURNING id", (subscription_id,))
 
     def list_schedules(self) -> list[dict[str, Any]]:
         columns = ("id", "name", "cron_expression", "pipeline_step", "active", "last_enqueued_at")

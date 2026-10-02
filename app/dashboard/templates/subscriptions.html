@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Subscriptions{% endblock %}
+{% block content %}
+<h1>Subscriptions</h1>
+<p>Disabled sources or filters pause their subscriptions. Source minimum intervals in Settings also apply.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Source</th><th>Filter</th><th>Interval (minutes)</th><th>Last polled</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody>{% for sub in subscriptions %}<tr>
+<td>{{ sub.source_name }}</td><td>{{ sub.filter_name }}</td><td>{{ sub.polling_interval_minutes }}</td><td>{{ sub.last_polled_at or 'Never' }}</td>
+<td>{{ 'active' if sub.active and sub.source_active and sub.filter_active else 'paused' }}</td>
+<td><form class="inline" method="post" action="/subscriptions/{{ sub.id }}/active"><input type="hidden" name="active" value="{{ 'false' if sub.active else 'true' }}"><button>{{ 'Disable' if sub.active else 'Enable' }}</button></form>
+<form class="inline" method="post" action="/subscriptions/{{ sub.id }}/delete"><button>Remove</button></form></td>
+</tr>{% else %}<tr><td colspan="6">No subscriptions yet.</td></tr>{% endfor %}</tbody></table></div>
+<h2>Add subscription</h2>
+<form class="stack" method="post" action="/subscriptions">
+<label>Source <select name="source_id" required>{% for source in sources %}<option value="{{ source.id }}">{{ source.name }}</option>{% endfor %}</select></label>
+<label>Search filter <select name="search_filter_id" required>{% for filter in filters %}<option value="{{ filter.id }}">{{ filter.name }}</option>{% endfor %}</select></label>
+<label>Polling interval (minutes) <input type="number" name="polling_interval_minutes" min="1" value="10" required></label>
+<button>Add subscription</button></form>
+{% endblock %}
