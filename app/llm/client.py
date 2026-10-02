@@ -13,6 +13,8 @@ from typing import Any, Generic, Protocol, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
+from app.llm.sanitizer import sanitize_scraped_text
+
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 Sleeper = Callable[[float], None]
@@ -214,7 +216,8 @@ def _assemble_prompt(prompt: str, untrusted_data: Mapping[str, str]) -> str:
     for label, value in untrusted_data.items():
         if re.fullmatch(r"[A-Za-z0-9_]+", label) is None:
             raise ValueError(f"Invalid untrusted-data label: {label!r}")
-        escaped = value.replace("--- BEGIN UNTRUSTED", "[delimiter removed]")
+        sanitized = sanitize_scraped_text(value)
+        escaped = sanitized.replace("--- BEGIN UNTRUSTED", "[delimiter removed]")
         escaped = escaped.replace("--- END UNTRUSTED", "[delimiter removed]")
         blocks.append(
             f"--- BEGIN UNTRUSTED DATA: {label} ---\n"

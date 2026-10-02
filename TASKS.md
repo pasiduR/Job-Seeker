@@ -30,7 +30,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/llm/client.py`, `tests/test_llm_client.py`, `tests/fixtures/llm_responses.json`, added the validated single-call boundary, one schema retry, bounded transport retries, safe data blocks, and metadata-only call logs.
 - [x] `llm/schemas.py`: Scorer, Tailor, Form mapper, and Listing extractor schemas
   - Done: `app/llm/schemas.py`, `tests/test_llm_schemas.py`, `tests/fixtures/schema_outputs.json`, added strict contracts for scoring, tailoring, form answers, and extracted listings.
-- [ ] Sanitizer that strips instruction-like text from scraped content
+- [x] Sanitizer that strips instruction-like text from scraped content
+  - Done: `app/llm/sanitizer.py`, `app/llm/client.py`, `tests/test_sanitizer.py`, `tests/fixtures/malicious_job_description.txt`, added instruction-line removal at the shared LLM trust boundary.
 
 ### Sources and scraping
 - [ ] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe
