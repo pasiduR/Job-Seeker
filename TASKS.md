@@ -155,6 +155,7 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: submit store/service, `app/sources/rate_limit.py`, shared HTTP/JobSpy pacing, worker configuration, migration `0006`, settings JSON editor, `tests/test_rate_limits.py` and fixtures; atomic per-lane cap reservations, timezone-aware day boundaries and durable request pacing; 58 fixture tests passed.
 - [x] Observability on the dashboard: cost per day, failures per step, `needs_manual` reasons
   - Done: dashboard repository/pages/navigation, `observability.html`, `tests/test_observability.py` and fixture; daily cost with unknown-cost counts, failed attempts per step without pipeline double-counting, latest manual-attention reasons; 25 fixture tests passed.
-- [~] Serialize source discovery, scraping and subscription polling with pipeline runs so full runs cannot overlap across workers.
-- [ ] Optional: self-hosted Langfuse trace UI (not a hard dependency)
+- [x] Serialize source discovery, scraping and subscription polling with pipeline runs so full runs cannot overlap across workers.
+  - Done: worker handler wrappers reuse the existing reentrant Postgres pipeline lock; `tests/test_run_lock.py` verifies locking precedes scraping/polling and releases on success/errors; 27 fixture tests passed.
+- [~] Optional: self-hosted Langfuse trace UI (not a hard dependency)
 - [ ] Tests for schedule triggering, watcher dedupe, and auto-submit conditions

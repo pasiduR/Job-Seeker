@@ -15,6 +15,7 @@ from app.queue.pipeline_runner import (
     PipelineStep,
     RunResult,
     StepOutcome,
+    PostgresPipelineStore,
 )
 from app.queue.postgres import QueueItem
 from app.queue.state_machine import JobStatus
@@ -69,6 +70,10 @@ class WorkerJob:
 
 
 class WorkerStore(Protocol):
+    def try_acquire_lock(self) -> bool: ...
+
+    def release_lock(self) -> None: ...
+
     def auto_submit_facts(self, job_id: int) -> AutoSubmitFacts | None: ...
 
     def active_sources(self) -> list[Source]: ...
@@ -109,6 +114,12 @@ class WorkerConnection(Protocol):
 class PostgresWorkerStore:
     def __init__(self, connection: WorkerConnection) -> None:
         self._connection = connection
+
+    def try_acquire_lock(self) -> bool:
+        return PostgresPipelineStore(self._connection).try_acquire_lock()
+
+    def release_lock(self) -> None:
+        PostgresPipelineStore(self._connection).release_lock()
 
     def _rows(
         self, query: str, params: tuple[object, ...] | None = None
@@ -266,12 +277,25 @@ class PipelineTasks:
         self._watcher = watcher
 
     def handlers(self) -> dict[str, Callable[[QueueItem], None]]:
-        return {
+        actions = {
             RUN_PIPELINE_TASK: self.run_pipeline,
             RUN_JOB_TASK: self.run_job,
             REVIEW_DECISION_TASK: self.review_decision,
             POLL_SUBSCRIPTION_TASK: self.poll_subscription,
         }
+        return {name: self._locked_handler(action) for name, action in actions.items()}
+
+    def _locked_handler(self, action: Callable[[QueueItem], None]) -> Callable[[QueueItem], None]:
+        def handle(item: QueueItem) -> None:
+            if not self._store.try_acquire_lock():
+                raise PipelineBusy("Another pipeline run is in progress")
+            try:
+                action(item)
+            finally:
+                # PostgreSQL session locks are reentrant: inner per-job acquisition
+                # and release leave this whole-run acquisition held until here.
+                self._store.release_lock()
+        return handle
 
     def poll_subscription(self, item: QueueItem) -> None:
         if self._watcher is None:
