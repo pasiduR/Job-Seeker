@@ -52,6 +52,9 @@ class PostgresJobStore:
         self._connection = connection
 
     def save_found(self, source_id: int, listing: JobListing) -> bool:
+        return self.save_found_id(source_id, listing) is not None
+
+    def save_found_id(self, source_id: int, listing: JobListing) -> int | None:
         with self._connection.transaction():
             rows = self._connection.execute(
                 """
@@ -74,7 +77,8 @@ class PostgresJobStore:
                     listing.posted_at,
                 ),
             )
-            return next(iter(rows), None) is not None
+            row = next(iter(rows), None)
+            return int(row[0]) if row is not None else None
 
 
 class ScraperService:

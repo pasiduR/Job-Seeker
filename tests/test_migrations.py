@@ -57,7 +57,7 @@ def test_initial_migration_encodes_critical_uniqueness() -> None:
 def test_migration_runner_is_idempotent() -> None:
     connection = FakeMigrationConnection()
 
-    assert apply_migrations(connection) == ["0001", "0002", "0003"]
+    assert apply_migrations(connection) == [migration.version for migration in discover_migrations()]
     executed_after_first_run = len(connection.executed)
     assert apply_migrations(connection) == []
     second_run_queries = connection.executed[executed_after_first_run:]

@@ -110,10 +110,10 @@ class SourceDispatcher:
         self._email_alerts = email_alerts
         self._jobspy_results_wanted = jobspy_results_wanted
 
-    def fetch(self, source: Source, search_filter: SearchFilter) -> list[JobListing]:
+    def fetch(self, source: Source, search_filter: SearchFilter, *, hours_old: int | None = None) -> list[JobListing]:
         company = str(source.config.get("company") or source.name)
         if source.type == SourceType.JOB_BOARD:
-            return self._job_board(source, search_filter)
+            return self._job_board(source, search_filter, hours_old=hours_old)
         if source.type == SourceType.ATS_BOARD:
             provider, board = ats_target(source)
             if provider == "greenhouse":
@@ -135,7 +135,7 @@ class SourceDispatcher:
             return self._email_alerts.listings()
         raise UnsupportedSource(f"Unknown source type {source.type.value!r}")
 
-    def _job_board(self, source: Source, search_filter: SearchFilter) -> list[JobListing]:
+    def _job_board(self, source: Source, search_filter: SearchFilter, *, hours_old: int | None = None) -> list[JobListing]:
         adapter = source.config.get("adapter")
         if adapter == "remotive":
             return self._boards.remotive()
@@ -162,6 +162,7 @@ class SourceDispatcher:
                         search_term=role,
                         location=location,
                         results_wanted=self._jobspy_results_wanted,
+                        hours_old=hours_old,
                     )
                 )
         return listings

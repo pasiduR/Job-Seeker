@@ -36,6 +36,7 @@ from app.steps.latex import LatexCompiler
 from app.steps.submit import PostgresSubmitStore, SubmitService
 from app.steps.scorer import PostgresScoreStore, Scorer
 from app.steps.tailor import PostgresTailoredCVStore, Tailor
+from app.triggers.watcher import Watcher
 
 
 HTTP_TIMEOUT_SECONDS = 30.0
@@ -125,17 +126,17 @@ def build_tasks(
     )
     pipeline_store = PostgresPipelineStore(connection)
     steps = llm_steps(connection, secrets, settings)
+    dispatcher = SourceDispatcher(
+        boards=RemoteBoardSource(http), ats=AtsApiSource(http),
+        jobspy=JobSpySource(timeout_seconds=JOBSPY_TIMEOUT_SECONDS),
+        career_pages=steps.career_pages if steps else None,
+        email_alerts=email_alerts(secrets), jobspy_results_wanted=settings.jobspy_results_wanted,
+    )
     return PipelineTasks(
         store=PostgresWorkerStore(connection),
         finder=SourceFinder(SourceRepository(connection), [PublicSourceCatalog()]),
-        dispatcher=SourceDispatcher(
-            boards=RemoteBoardSource(http),
-            ats=AtsApiSource(http),
-            jobspy=JobSpySource(timeout_seconds=JOBSPY_TIMEOUT_SECONDS),
-            career_pages=steps.career_pages if steps else None,
-            email_alerts=email_alerts(secrets),
-            jobspy_results_wanted=settings.jobspy_results_wanted,
-        ),
+        dispatcher=dispatcher,
+        watcher=Watcher(connection, dispatcher),
         scraper=ScraperService(PostgresJobStore(connection)),
         base_cv=BaseCVService(
             store=PostgresBaseCVStore(connection), compiler=LatexCompiler()

@@ -36,6 +36,7 @@ from app.steps.scorer import Scorer
 from app.steps.tailor import Tailor, TailorSettings
 from app.triggers.manual import RUN_JOB_TASK, RUN_PIPELINE_TASK
 from app.triggers.review import REVIEW_DECISION_TASK, Decision
+from app.triggers.watcher import POLL_SUBSCRIPTION_TASK, Watcher
 
 
 JOB_STEPS = ("score", "tailor", "fill", "submit")
@@ -229,6 +230,7 @@ class PipelineTasks:
         scorer: Scorer | None = None,
         tailor: Tailor | None = None,
         filler: FillService | None = None,
+        watcher: Watcher | None = None,
     ) -> None:
         self._store = store
         self._finder = finder
@@ -240,13 +242,31 @@ class PipelineTasks:
         self._scorer = scorer
         self._tailor = tailor
         self._filler = filler
+        self._watcher = watcher
 
     def handlers(self) -> dict[str, Callable[[QueueItem], None]]:
         return {
             RUN_PIPELINE_TASK: self.run_pipeline,
             RUN_JOB_TASK: self.run_job,
             REVIEW_DECISION_TASK: self.review_decision,
+            POLL_SUBSCRIPTION_TASK: self.poll_subscription,
         }
+
+    def poll_subscription(self, item: QueueItem) -> None:
+        if self._watcher is None:
+            raise PipelineNotReady("Watcher is not configured")
+        # Let queue retry transient poll failures, but record each failed attempt.
+        started = perf_counter()
+        error = None
+        try:
+            self._watcher.poll(item)
+        except Exception as exc:
+            error = f"Subscription poll failed: {type(exc).__name__}"
+            raise
+        finally:
+            self._store.write_log(run_id=item.run_id, trigger="event", step="watch",
+                                  job_id=None, status="failed" if error else "completed",
+                                  duration_ms=max(0, round((perf_counter() - started) * 1000)), error=error)
 
     def review_decision(self, item: QueueItem) -> None:
         """Approve (then submit right away) or reject one filled job."""

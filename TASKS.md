@@ -145,8 +145,9 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Blocked: local `deploy/systemd/` units/timers and `deploy/README.md` prepared; two fixture tests pass. Actual installation needs VPS host/access, target domain/paths and your explicit deployment approval; Linux systemd/runtime validation is pending.
 - [x] Subscriptions page (source, search filter, polling interval with a 10 min default)
   - Done: `app/triggers/subscriptions.py`, dashboard repository/pages/templates, `tests/test_subscriptions.py`, `tests/fixtures/subscription.json`; authenticated subscription controls with validated source/filter IDs and 10-minute default; 34 fixture tests passed.
-- [~] Watcher detection for each source: alert emails, jobspy with a "posted within the last hour" filter every 15–30 min, ATS JSON APIs every 5–10 min, and RSS polling; a new match starts that job's pipeline right away
-- [ ] Fast-lane flow: score → tailor (only if needed) → fill → notify
+- [x] Watcher detection for each source: alert emails, jobspy with a "posted within the last hour" filter every 15–30 min, ATS JSON APIs every 5–10 min, and RSS polling; a new match starts that job's pipeline right away
+  - Done: `app/triggers/watcher.py`, `app/sources/scraper.py`, `app/sources/dispatch.py`, worker wiring, migration `0004`, settings and watcher tests; atomic job/queue handoff, pending-poll dedupe, active-subscription checks, one-hour JobSpy filtering and configured source minimum intervals; 38 fixture tests passed.
+- [~] Fast-lane flow: score → tailor (only if needed) → fill → notify
 - [ ] Optional auto-submit (off by default), only when all conditions hold: score ≥ the configured value (default 8), the source is on the trusted list, no flagged fields, and no skills were added
 - [ ] Separate daily cap for fast-lane applications; per-source polling and rate limits read from `settings`
 - [ ] Observability on the dashboard: cost per day, failures per step, `needs_manual` reasons

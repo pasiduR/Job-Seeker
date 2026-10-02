@@ -60,6 +60,8 @@ class RuntimeSettings(BaseModel):
     )
     auto_submit: bool = False
     automation_timezone: str = "Asia/Colombo"
+    watcher_jobspy_min_minutes: int = Field(default=15, ge=15, le=30)
+    watcher_ats_min_minutes: int = Field(default=5, ge=5, le=10)
     batch_daily_cap: int = Field(default=10, ge=0)
     jobspy_results_wanted: int = Field(default=20, ge=1)
     source_finder_types: list[
