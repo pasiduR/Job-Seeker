@@ -58,7 +58,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### CV Tailor
 - [x] Base CV (LaTeX) stored in the DB and compiled once to a base PDF
   - Done: `app/steps/latex.py`, `app/steps/base_cv.py`, `tests/test_base_cv.py`, `tests/fixtures/base_cv.tex`, added a sandboxed tectonic/pdflatex compiler, LaTeX-to-text extraction, and base-CV storage that recompiles only when the LaTeX or its PDF changes.
-- [ ] `prompts/tailor_v1.md` and `steps/tailor.py`: skip tailoring if the base CV scores at or above the threshold; otherwise reorder and reword existing content
+- [x] `prompts/tailor_v1.md` and `steps/tailor.py`: skip tailoring if the base CV scores at or above the threshold; otherwise reorder and reword existing content
+  - Done: `app/llm/prompts/tailor_v1.md`, `app/steps/tailor.py`, `app/config.py`, `tests/test_tailor.py`, `tests/test_config.py`, `tests/fixtures/job_backend_python.txt`, `tests/fixtures/tailor_outputs.json`, added the tailor prompt and step; tailoring is skipped (base PDF used) when the job score is at or above the new `tailor_skip_threshold` setting (default 9), because reusing `score_threshold` would skip every job that passes scoring.
 - [ ] Code checks: reject output if it adds new employers, projects, degrees, dates, or metrics (entity diff); enforce the `added_skills` limits (≤ M, `est_days` ≤ N); apply the placement toggle
 - [ ] Compile with `tectonic` or `pdflatex`; on error make one LLM fix attempt, then mark the job `failed`
 - [ ] Save the result to `cv_versions` (tex, pdf path, diff vs base) and `skills_to_learn`

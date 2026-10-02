@@ -45,6 +45,8 @@ class RuntimeSettings(BaseModel):
     model_config = ConfigDict(extra="allow", frozen=True)
 
     score_threshold: int = Field(default=7, ge=1, le=10)
+    # Jobs scoring at or above this already fit the base CV, so tailoring is skipped.
+    tailor_skip_threshold: int = Field(default=9, ge=1, le=10)
     max_skill_days: int = Field(default=7, ge=0)
     max_added_skills: int = Field(default=3, ge=0)
     skill_placement: Literal["skills_section", "currently_learning"] = (

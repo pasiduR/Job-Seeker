@@ -50,6 +50,7 @@ def test_load_config_supplies_safe_runtime_defaults(project_root: Path) -> None:
     config = load_config(env_file=project_root / "tests/fixtures/missing.env")
 
     assert config.settings.score_threshold == 7
+    assert config.settings.tailor_skip_threshold == 9
     assert config.settings.max_skill_days == 7
     assert config.settings.max_added_skills == 3
     assert config.settings.skill_placement == "currently_learning"

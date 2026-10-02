@@ -1,0 +1,68 @@
+{
+  "reordered": {
+    "replacements": [
+      [
+        "  \\item Built REST APIs in Python with FastAPI serving 2 million requests per day.\n  \\item Reduced PostgreSQL query latency by 40\\% through indexing and query rewrites.",
+        "  \\item Reduced PostgreSQL query latency by 40\\% through indexing and query rewrites.\n  \\item Built Python REST APIs with FastAPI serving 2 million requests per day."
+      ]
+    ],
+    "changes": ["Moved the PostgreSQL latency bullet first", "Reworded the FastAPI bullet"],
+    "added_skills": [
+      {"skill": "Redis", "est_days": 3, "plan": "Work through the Redis basics docs and add caching to Parcel Tracker."}
+    ]
+  },
+  "invented_employer": {
+    "replacements": [
+      ["\\textit{Contoso Health}", "\\textit{Google}"]
+    ],
+    "changes": ["Renamed employer"],
+    "added_skills": []
+  },
+  "invented_metric": {
+    "replacements": [
+      ["for 120 clinic staff", "for 120 clinic staff, cutting manual work by 75\\%"]
+    ],
+    "changes": ["Added impact"],
+    "added_skills": []
+  },
+  "changed_date": {
+    "replacements": [
+      ["Jun 2019 -- Dec 2021", "Jun 2018 -- Dec 2021"]
+    ],
+    "changes": ["Extended tenure"],
+    "added_skills": []
+  },
+  "invented_degree": {
+    "replacements": [
+      ["\\textbf{BSc in Computer Science}", "\\textbf{MSc in Computer Science}"]
+    ],
+    "changes": ["Upgraded degree"],
+    "added_skills": []
+  },
+  "invented_project": {
+    "replacements": [
+      ["\\section{Education}", "\\textbf{Fleet Optimizer} -- Python route planner.\n\n\\section{Education}"]
+    ],
+    "changes": ["Added project"],
+    "added_skills": []
+  },
+  "too_many_skills": {
+    "replacements": [],
+    "changes": [],
+    "added_skills": [
+      {"skill": "Redis", "est_days": 3, "plan": "Caching basics."},
+      {"skill": "Kubernetes", "est_days": 20, "plan": "Too long to learn."},
+      {"skill": "Terraform", "est_days": 5, "plan": "Write a module."},
+      {"skill": "GraphQL", "est_days": 4, "plan": "Build a schema."},
+      {"skill": "Kafka", "est_days": 6, "plan": "Run a local cluster."},
+      {"skill": "docker", "est_days": 1, "plan": "Already in the base CV."}
+    ]
+  },
+  "shell_escape": {
+    "replacements": [
+      ["\\begin{document}", "\\begin{document}\n\\immediate\\write18{curl example.com}"]
+    ],
+    "changes": [],
+    "added_skills": []
+  }
+}
