@@ -12,7 +12,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/` package directories, `tests/fixtures/`, `tests/evals/`, `tests/conftest.py`, `tests/test_project_layout.py`, added and verified the prescribed project layout.
 - [x] `pyproject.toml` (Python 3.11+, Pydantic, Playwright, python-jobspy, Crawl4AI, DB driver)
   - Done: `pyproject.toml`, `tests/conftest.py`, `tests/test_project_metadata.py`, declared Python 3.11+, required runtime packages, and pytest configuration with metadata tests.
-- [ ] `.env.example` and a `.gitignore` covering `.env`, CVs, screenshots, and browser profiles
+- [x] `.env.example` and a `.gitignore` covering `.env`, CVs, screenshots, and browser profiles
+  - Done: `.env.example`, `.gitignore`, `tests/fixtures/env_example_required_keys.txt`, `tests/test_environment_files.py`, documented secret keys and ignored sensitive runtime artifacts.
 - [ ] `config.py`: load `.env` secrets plus the `settings` table, with defaults for threshold, N=7, M=3, placement=`currently_learning`, auto-submit=off, and daily caps
 - [ ] Neon DB migrations for every table: `sources`, `search_filters`, `subscriptions`, `schedules`, `jobs`, `cv_versions`, `applications` (unique `job_id`), `skills_to_learn`, `profile`, `queue_jobs`, `notifications`, `run_logs`, `settings`, `llm_calls`, `form_traces`
 - [ ] Job status state machine (`found → scored → tailored → filled → approved → submitted` / `skipped` / `failed` / `needs_manual`) with one function per transition

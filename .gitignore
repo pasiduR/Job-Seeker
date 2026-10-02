@@ -1,0 +1,29 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Python build and test artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+dist/
+build/
+
+# Runtime artifacts containing personal data or authenticated sessions
+/data/cvs/
+/data/screenshots/
+/data/browser-profiles/
+/storage/cvs/
+/storage/screenshots/
+/storage/browser-profiles/
+
+# Editor and operating-system metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
