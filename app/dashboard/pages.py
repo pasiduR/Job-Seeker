@@ -384,6 +384,13 @@ def runs_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> R
     return _render(request, "runs.html", logs=repos.store.list_run_logs(limit=RUN_LOG_LIMIT))
 
 
+@router.get("/observability", response_class=HTMLResponse)
+def observability_page(request: Request, repos: DashboardRepos = Depends(get_repos)) -> Response:
+    settings = RuntimeSettings.model_validate(repos.store.read_settings())
+    return _render(request, "observability.html", timezone=settings.automation_timezone,
+                   **repos.store.observability(settings.automation_timezone))
+
+
 # --- Settings ----------------------------------------------------------------
 
 

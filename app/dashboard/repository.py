@@ -101,6 +101,8 @@ class RunLogRow:
 
 
 class DashboardStore(Protocol):
+    def observability(self, timezone_name: str) -> dict[str, list[dict[str, Any]]]: ...
+
     def list_subscriptions(self) -> list[dict[str, Any]]: ...
 
     def create_subscription(self, values: SubscriptionCreate) -> bool: ...
@@ -194,6 +196,35 @@ class PostgresDashboardStore:
 
     def list_sources(self) -> list[Source]:
         return self._sources.list()
+
+    def observability(self, timezone_name: str) -> dict[str, list[dict[str, Any]]]:
+        costs = self._rows("""
+            SELECT (created_at AT TIME ZONE %s)::date, coalesce(sum(cost_usd), 0),
+                   count(*), count(*) FILTER (WHERE cost_usd IS NULL)
+            FROM llm_calls WHERE created_at >= now() - interval '30 days'
+            GROUP BY 1 ORDER BY 1 DESC
+        """, (timezone_name,))
+        failures = self._rows("""
+            SELECT step, count(*) FROM run_logs
+            WHERE status IN ('failed', 'completed_with_errors') AND step <> 'pipeline'
+              AND created_at >= now() - interval '30 days'
+            GROUP BY step ORDER BY count(*) DESC, step
+        """)
+        manual = self._rows("""
+            SELECT j.id, j.title, j.company,
+                   coalesce(latest.error, f.reason, j.needs_manual_reason, 'Reason unavailable')
+            FROM jobs j LEFT JOIN form_fills f ON f.job_id = j.id
+            LEFT JOIN LATERAL (
+                SELECT error FROM run_logs WHERE job_id = j.id AND status = 'needs_manual'
+                  AND error IS NOT NULL ORDER BY created_at DESC, id DESC LIMIT 1
+            ) latest ON true
+            WHERE j.status = 'needs_manual' ORDER BY j.updated_at DESC, j.id DESC LIMIT 200
+        """)
+        return {
+            "costs": [dict(zip(("day", "cost_usd", "calls", "unknown_costs"), row)) for row in costs],
+            "failures": [dict(zip(("step", "count"), row)) for row in failures],
+            "manual": [dict(zip(("job_id", "title", "company", "reason"), row)) for row in manual],
+        }
 
     def list_subscriptions(self) -> list[dict[str, Any]]:
         columns = ("id", "source_name", "filter_name", "polling_interval_minutes", "active", "last_polled_at", "source_active", "filter_active")

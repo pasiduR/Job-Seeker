@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Observability{% endblock %}
+{% block content %}
+<h1>Observability</h1>
+<p>Last 30 days of calls and failures. Cost dates use {{ timezone }}. Failures count step attempts, including retries.</p>
+<h2>LLM cost per day (USD)</h2>
+<table><thead><tr><th>Date</th><th>Recorded cost</th><th>Calls</th><th>Calls with unknown cost</th></tr></thead>
+<tbody>{% for cost in costs %}<tr><td>{{ cost.day }}</td><td>{{ '%.6f' | format(cost.cost_usd) }}</td><td>{{ cost.calls }}</td><td>{{ cost.unknown_costs }}</td></tr>
+{% else %}<tr><td colspan="4">No LLM calls.</td></tr>{% endfor %}</tbody></table>
+<h2>Failures per step</h2>
+<table><thead><tr><th>Step</th><th>Failed attempts</th></tr></thead>
+<tbody>{% for failure in failures %}<tr><td>{{ failure.step }}</td><td>{{ failure.count }}</td></tr>
+{% else %}<tr><td colspan="2">No failures.</td></tr>{% endfor %}</tbody></table>
+<h2>Needs manual attention</h2>
+<table><thead><tr><th>Job</th><th>Company</th><th>Reason</th></tr></thead>
+<tbody>{% for job in manual %}<tr><td>{{ job.title }}</td><td>{{ job.company }}</td><td>{{ job.reason }}</td></tr>
+{% else %}<tr><td colspan="3">No jobs need manual attention.</td></tr>{% endfor %}</tbody></table>
+{% endblock %}

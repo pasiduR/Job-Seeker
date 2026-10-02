@@ -1,0 +1,1 @@
+{"costs": [{"day": "2026-10-02", "cost_usd": 0.125, "calls": 3, "unknown_costs": 1}], "failures": [{"step": "watch", "count": 2}], "manual": [{"job_id": 1, "title": "Python Engineer", "company": "Acme", "reason": "CAPTCHA detected <script>alert(1)</script>"}]}
