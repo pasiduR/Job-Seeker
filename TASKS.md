@@ -167,3 +167,5 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: expanded scheduler, watcher and auto-submit fixture tests; updated ATS store rows for lane columns; full offline suite passed: 315 tests, no skips. One existing pytest configuration warning remains.
 - [x] Include SQL migrations in installed packages and declare timezone data for Windows automation.
   - Done: `pyproject.toml`, `tests/test_installed_package.py`; a locally built wheel contains all SQL migrations and browser/dashboard/prompt assets, and Windows timezone data is declared; 17 packaging/migration/scheduler tests passed without downloads.
+- [x] Migration command (`python -m app.db`) that applies pending migrations from `DATABASE_URL` in `.env`
+  - Done: `app/db/__main__.py`, `tests/test_migrations.py`, `deploy/README.md`, added the command (idempotent; prints what it applied) and pointed the VPS notes at it.

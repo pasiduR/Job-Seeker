@@ -63,3 +63,27 @@ def test_migration_runner_is_idempotent() -> None:
     second_run_queries = connection.executed[executed_after_first_run:]
 
     assert all("CREATE TABLE sources" not in query for query in second_run_queries)
+
+
+def test_cli_applies_pending_migrations_with_the_env_database_url(
+    monkeypatch: Any, capsys: Any
+) -> None:
+    from app.db.__main__ import main
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example.invalid/jobs")
+    connection = FakeMigrationConnection()
+    urls: list[str] = []
+
+    def connect(url: str) -> Any:
+        urls.append(url)
+        return nullcontext(connection)
+
+    versions = [migration.version for migration in discover_migrations()]
+
+    assert main(connect) == versions
+    assert main(connect) == []
+    assert urls == ["postgresql://example.invalid/jobs"] * 2
+    assert capsys.readouterr().out.splitlines() == [
+        f"Applied migrations: {', '.join(versions)}",
+        "Database is up to date",
+    ]

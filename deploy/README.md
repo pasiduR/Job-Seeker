@@ -19,8 +19,8 @@ profiles share paths. The worker uses Xvfb display :99 for headed Chromium;
 the display is not exposed over TCP. Initial login/CAPTCHA work needs a secured
 interactive session and must not be bypassed automatically.
 
-Before enabling services, run `app.db.migrate.apply_migrations` using a
-psycopg connection loaded from the `.env` DATABASE_URL (do not paste the
+Before enabling services, run `python -m app.db` as `job-seeker` from
+`/var/lib/job-seeker` so it reads DATABASE_URL from `.env` (do not paste the
 URL into a command). Back up the database and review migrations first.
 Set dashboard URL, timezone, source polling/rate limits, caps and schedules
 through the dashboard. Keep auto-submit off until explicitly authorized.
