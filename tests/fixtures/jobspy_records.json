@@ -1,0 +1,13 @@
+[
+  {
+    "id": "indeed-123",
+    "site": "indeed",
+    "title": "Backend Engineer",
+    "company": "Example Co",
+    "job_url": "https://example.com/jobs/123",
+    "description": "Build Python services.",
+    "location": "Colombo, Sri Lanka",
+    "is_remote": false,
+    "date_posted": "2026-10-01"
+  }
+]
