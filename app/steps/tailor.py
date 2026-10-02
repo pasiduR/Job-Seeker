@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import difflib
 import json
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel
 
 from app.llm.schemas import AddedSkill, LatexFixOutput, TailorOutput
 from app.queue.state_machine import JobStatus
-from app.steps.base_cv import CVVersion, PdfCompiler
+from app.steps.base_cv import DEFAULT_CV_DIR, CVVersion, PdfCompiler, write_pdf
 from app.steps.cv_checks import (
     SkillPlacement,
     apply_skill_placement,
@@ -48,6 +50,70 @@ class TailorClient(Protocol):
     ) -> SchemaT: ...
 
 
+class TailoredCVStore(Protocol):
+    def save_tailored(
+        self,
+        *,
+        job_id: int,
+        tex: str,
+        pdf_path: str,
+        diff_from_base: str,
+        skills: Sequence[AddedSkill],
+    ) -> int: ...
+
+
+class TailorConnection(Protocol):
+    def execute(
+        self, query: str, params: tuple[object, ...] | None = None
+    ) -> Iterable[tuple[Any, ...]]: ...
+
+    def transaction(self) -> AbstractContextManager[object]: ...
+
+
+class PostgresTailoredCVStore:
+    def __init__(self, connection: TailorConnection) -> None:
+        self._connection = connection
+
+    def save_tailored(
+        self,
+        *,
+        job_id: int,
+        tex: str,
+        pdf_path: str,
+        diff_from_base: str,
+        skills: Sequence[AddedSkill],
+    ) -> int:
+        """Upsert the job's CV and replace its skills so re-runs never duplicate."""
+
+        with self._connection.transaction():
+            rows = self._connection.execute(
+                """
+                INSERT INTO cv_versions (job_id, is_base, tex, pdf_path, diff_from_base)
+                VALUES (%s, FALSE, %s, %s, %s)
+                ON CONFLICT (job_id) WHERE job_id IS NOT NULL
+                DO UPDATE SET tex = EXCLUDED.tex,
+                              pdf_path = EXCLUDED.pdf_path,
+                              diff_from_base = EXCLUDED.diff_from_base
+                RETURNING id
+                """,
+                (job_id, tex, pdf_path, diff_from_base),
+            )
+            cv_version_id = int(next(iter(rows))[0])
+            self._connection.execute(
+                "DELETE FROM skills_to_learn WHERE job_id = %s", (job_id,)
+            )
+            for skill in skills:
+                self._connection.execute(
+                    """
+                    INSERT INTO skills_to_learn (
+                        job_id, skill, estimated_days, learning_plan
+                    ) VALUES (%s, %s, %s, %s)
+                    """,
+                    (job_id, skill.skill, skill.est_days, skill.plan),
+                )
+        return cv_version_id
+
+
 @dataclass(frozen=True)
 class TailorSettings:
     skip_threshold: int
@@ -63,6 +129,8 @@ class TailorDecision:
     output: TailorOutput | None = None
     tex: str | None = None
     pdf: bytes | None = None
+    pdf_path: str | None = None
+    cv_version_id: int | None = None
     added_skills: tuple[AddedSkill, ...] = ()
     dropped_skills: tuple[str, ...] = ()
     error: str | None = None
@@ -70,11 +138,19 @@ class TailorDecision:
 
 class Tailor:
     def __init__(
-        self, *, llm: TailorClient, compiler: PdfCompiler, model: str
+        self,
+        *,
+        llm: TailorClient,
+        compiler: PdfCompiler,
+        store: TailoredCVStore,
+        model: str,
+        storage_dir: Path = DEFAULT_CV_DIR,
     ) -> None:
         self._llm = llm
         self._compiler = compiler
+        self._store = store
         self._model = model
+        self._storage_dir = storage_dir
 
     def run(
         self,
@@ -86,7 +162,12 @@ class Tailor:
         settings: TailorSettings,
     ) -> TailorDecision:
         if job_score >= settings.skip_threshold:
-            return TailorDecision(status=JobStatus.TAILORED, used_base=True)
+            return TailorDecision(
+                status=JobStatus.TAILORED,
+                used_base=True,
+                pdf_path=base_cv.pdf_path,
+                cv_version_id=base_cv.id,
+            )
 
         output = self._llm.generate(
             schema=TailorOutput,
@@ -109,7 +190,25 @@ class Tailor:
         decision = _check_output(output, base_cv.tex, settings)
         if decision.status == JobStatus.FAILED or decision.tex is None:
             return decision
-        return self._compile_with_one_fix(job_id, base_cv.tex, decision, settings)
+        decision = self._compile_with_one_fix(job_id, base_cv.tex, decision, settings)
+        if decision.status == JobStatus.FAILED:
+            return decision
+        return self._save(job_id, base_cv.tex, decision)
+
+    def _save(
+        self, job_id: int, base_tex: str, decision: TailorDecision
+    ) -> TailorDecision:
+        assert decision.tex is not None and decision.pdf is not None
+        pdf_path = self._storage_dir / f"job-{job_id}.pdf"
+        write_pdf(pdf_path, decision.pdf)
+        cv_version_id = self._store.save_tailored(
+            job_id=job_id,
+            tex=decision.tex,
+            pdf_path=str(pdf_path),
+            diff_from_base=diff_against_base(base_tex, decision.tex),
+            skills=decision.added_skills,
+        )
+        return replace(decision, pdf_path=str(pdf_path), cv_version_id=cv_version_id)
 
     def _compile_with_one_fix(
         self,
@@ -151,6 +250,17 @@ class Tailor:
                 decision, f"LaTeX compile failed after one fix: {second_error}"
             )
         return replace(decision, tex=fix.tex, pdf=pdf)
+
+
+def diff_against_base(base_tex: str, tailored_tex: str) -> str:
+    return "".join(
+        difflib.unified_diff(
+            base_tex.splitlines(keepends=True),
+            tailored_tex.splitlines(keepends=True),
+            fromfile="base.tex",
+            tofile="tailored.tex",
+        )
+    )
 
 
 def _check_output(

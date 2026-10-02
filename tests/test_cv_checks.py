@@ -12,8 +12,8 @@ from app.steps.cv_checks import (
     limit_added_skills,
 )
 from app.steps.latex import latex_to_text
-from app.steps.tailor import Tailor, TailorSettings
-from tests.test_tailor import FixtureCompiler, FixtureTailorClient, tailor_output
+from app.steps.tailor import TailorSettings
+from tests.test_tailor import FixtureTailorClient, make_tailor, tailor_output
 
 
 @pytest.fixture
@@ -30,11 +30,10 @@ def settings(placement: str = "currently_learning") -> TailorSettings:
     )
 
 
-def run_case(project_root: Path, base_tex: str, case: str, placement: str = "currently_learning"):
+def run_case(
+    project_root: Path, tmp_path: Path, base_tex: str, case: str, placement: str = "currently_learning"):
     output = tailor_output(project_root, base_tex, case)
-    return Tailor(
-        llm=FixtureTailorClient([output]), compiler=FixtureCompiler(), model="fixture"
-    ).run(
+    return make_tailor(FixtureTailorClient([output]), tmp_path).run(
         job_id=3,
         job_description="Backend role",
         job_score=6,
@@ -60,9 +59,9 @@ def test_reordered_cv_passes_entity_diff(project_root: Path, base_tex: str) -> N
     ],
 )
 def test_entity_diff_rejects_invented_facts(
-    project_root: Path, base_tex: str, case: str, expected: str
+    project_root: Path, tmp_path: Path, base_tex: str, case: str, expected: str
 ) -> None:
-    decision = run_case(project_root, base_tex, case)
+    decision = run_case(project_root, tmp_path, base_tex, case)
 
     assert decision.status == JobStatus.FAILED
     assert decision.tex is None
@@ -70,8 +69,8 @@ def test_entity_diff_rejects_invented_facts(
     assert expected in decision.error
 
 
-def test_unsafe_latex_is_rejected(project_root: Path, base_tex: str) -> None:
-    decision = run_case(project_root, base_tex, "shell_escape")
+def test_unsafe_latex_is_rejected(project_root: Path, tmp_path: Path, base_tex: str) -> None:
+    decision = run_case(project_root, tmp_path, base_tex, "shell_escape")
 
     assert decision.status == JobStatus.FAILED
     assert decision.error is not None
@@ -95,9 +94,9 @@ def test_skill_limits_drop_extras_long_and_existing_skills(
 
 
 def test_tailor_enforces_limits_and_currently_learning_placement(
-    project_root: Path, base_tex: str
+    project_root: Path, tmp_path: Path, base_tex: str
 ) -> None:
-    decision = run_case(project_root, base_tex, "too_many_skills")
+    decision = run_case(project_root, tmp_path, base_tex, "too_many_skills")
 
     assert decision.status == JobStatus.TAILORED
     assert len(decision.added_skills) == 3
@@ -110,9 +109,9 @@ def test_tailor_enforces_limits_and_currently_learning_placement(
 
 
 def test_skills_section_placement_extends_skill_list(
-    project_root: Path, base_tex: str
+    project_root: Path, tmp_path: Path, base_tex: str
 ) -> None:
-    decision = run_case(project_root, base_tex, "reordered", placement="skills_section")
+    decision = run_case(project_root, tmp_path, base_tex, "reordered", placement="skills_section")
 
     assert decision.status == JobStatus.TAILORED
     assert decision.tex is not None
