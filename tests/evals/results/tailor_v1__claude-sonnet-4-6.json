@@ -1,0 +1,20 @@
+{
+  "step": "tailor",
+  "model": "claude-sonnet-4-6",
+  "summary": {
+    "prompt_version": "tailor_v1",
+    "cases": 10,
+    "schema_valid": 10,
+    "agreement": 0,
+    "violations": 0,
+    "compiled": 10
+  },
+  "failures": [],
+  "usage": {
+    "calls": 10,
+    "invalid_calls": 0,
+    "input_tokens": 10424,
+    "output_tokens": 6161,
+    "cost_usd": "0.123687"
+  }
+}

@@ -89,9 +89,10 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### Tests and evals
 - [x] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)
   - Done: `tests/test_parser_edge_cases.py`, `tests/fixtures/jobs_feed_atom.xml`, audited existing parser/dedupe/state-machine/queue tests and filled gaps: Atom feeds, malformed feed and ATS payloads, JobSpy retry limit, store-level duplicates, queue backoff/final failure, unknown worker tasks, and pipeline stop after skip.
-- [!] Eval sets of 10–20 fixtures each for the scorer and the tailor (tailor checks: no invented entities, LaTeX compiles, N/M limits)
+- [x] Eval sets of 10–20 fixtures each for the scorer and the tailor (tailor checks: no invented entities, LaTeX compiles, N/M limits)
   - Blocked: harness and cases are in (`tests/evals/harness.py`, `scorer_cases.json` with 12 cases, `tailor_cases.json` with 10 cases, `tests/test_eval_harness.py`; it reports schema validity, score agreement, rule violations, compile success, and regressions between prompt versions). Running it for real needs the LLM transport (blocked above, and it costs API spend, so I will ask first) and `tectonic` or `pdflatex` installed for the compile check.
   - Update (2026-10-02): the LLM transport is done (Claude Sonnet 4.6 on Claude Platform on AWS). Still blocked on: (1) your OK to spend on a live run, estimated under $1 per prompt version for the 22 cases at $3/$15 per MTok; (2) `tectonic` or `pdflatex` installed; (3) a small live runner (`python -m tests.evals`) that builds the real client, which I will add once you approve the spend.
+  - Done: `tests/evals/__main__.py`, `tests/test_eval_runner.py`, `tests/evals/results/scorer_v1__claude-sonnet-4-6.json`, `tests/evals/results/tailor_v1__claude-sonnet-4-6.json`, added a live runner (`python -m tests.evals [scorer|tailor] [--baseline FILE]`) and saved baselines from a live run (approved spend, about $0.16 in total): scorer 12/12 schema-valid, 11/12 agreement (`senior-staff-architect` scored 1, expected 2-6); tailor 10/10 valid, 0 rule violations, 10/10 compiled with tectonic 0.17.
 
 ---
 

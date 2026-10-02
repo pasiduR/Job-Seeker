@@ -1,0 +1,22 @@
+{
+  "step": "scorer",
+  "model": "claude-sonnet-4-6",
+  "summary": {
+    "prompt_version": "scorer_v1",
+    "cases": 12,
+    "schema_valid": 12,
+    "agreement": 11,
+    "violations": 0,
+    "compiled": 0
+  },
+  "failures": [
+    "senior-staff-architect: score 1 outside 2-6"
+  ],
+  "usage": {
+    "calls": 12,
+    "invalid_calls": 0,
+    "input_tokens": 6007,
+    "output_tokens": 1343,
+    "cost_usd": "0.038166"
+  }
+}
