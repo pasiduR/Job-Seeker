@@ -1,0 +1,1 @@
+"""Application notification integrations."""
