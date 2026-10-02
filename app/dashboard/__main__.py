@@ -18,6 +18,7 @@ from app.queue.postgres import PostgresQueue
 from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
 from app.steps.latex import LatexCompiler
 from app.triggers.manual import ManualTrigger
+from app.triggers.review import ReviewDecisions
 
 
 def repo_factory(pool: ConnectionPool):  # type: ignore[no-untyped-def]
@@ -32,6 +33,7 @@ def repo_factory(pool: ConnectionPool):  # type: ignore[no-untyped-def]
                     store=PostgresBaseCVStore(connection), compiler=compiler
                 ),
                 trigger=ManualTrigger(PostgresQueue(connection)),
+                decisions=ReviewDecisions(PostgresQueue(connection)),
             )
 
     return open_repos

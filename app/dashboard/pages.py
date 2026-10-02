@@ -20,6 +20,7 @@ from app.steps.form_mapper import RESUME_UPLOAD
 from app.sources.models import SourceCreate, SourceType
 from app.steps.latex import LatexCompileError, LatexEngineMissing
 from app.triggers.manual import PIPELINE_STEPS
+from app.triggers.review import Decision
 
 
 RUNNABLE_STATUSES = frozenset(
@@ -272,6 +273,16 @@ def review_screenshot(job_id: int, repos: DashboardRepos = Depends(get_repos)) -
     if not path.is_relative_to(SCREENSHOT_ROOT.resolve()) or not path.is_file():
         return Response("Screenshot not found", status_code=404)
     return FileResponse(path, media_type="image/png")
+
+
+@router.post("/review/{job_id}/{decision}")
+def review_decision(
+    job_id: int, decision: Decision, repos: DashboardRepos = Depends(get_repos)
+) -> Response:
+    result = repos.decisions.decide(job_id, decision)
+    if result.queued:
+        return _redirect("/review", message=result.message)
+    return _redirect("/review", error=result.message)
 
 
 # --- Manual triggers ---------------------------------------------------------

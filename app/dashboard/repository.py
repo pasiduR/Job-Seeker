@@ -15,6 +15,7 @@ from app.config import read_settings_table
 from app.sources.models import Source, SourceCreate, SourceRepository, SourceUpdate
 from app.steps.base_cv import BaseCVService, CVVersion, PostgresBaseCVStore
 from app.triggers.manual import ManualTrigger
+from app.triggers.review import ReviewDecisions
 
 
 class SearchFilterCreate(BaseModel):
@@ -142,6 +143,7 @@ class DashboardRepos:
     store: DashboardStore
     base_cv: BaseCVService
     trigger: ManualTrigger
+    decisions: ReviewDecisions
 
 
 class DashboardConnection(Protocol):

@@ -25,17 +25,20 @@ from app.sources.scraper import ScraperService, SearchFilter
 from app.sources.types import JobListing
 from app.steps.base_cv import BaseCVService, CVVersion
 from app.steps.fill import FillService
+from app.steps.submit import SubmitService
 from app.steps.latex import latex_to_text
 from app.steps.scorer import Scorer
 from app.steps.tailor import Tailor, TailorSettings
 from app.triggers.manual import RUN_JOB_TASK, RUN_PIPELINE_TASK
+from app.triggers.review import REVIEW_DECISION_TASK, Decision
 
 
-JOB_STEPS = ("score", "tailor", "fill")
+JOB_STEPS = ("score", "tailor", "fill", "submit")
 _STEP_STATUSES = {
     "score": JobStatus.FOUND,
     "tailor": JobStatus.SCORED,
     "fill": JobStatus.TAILORED,
+    "submit": JobStatus.APPROVED,
 }
 
 
@@ -198,6 +201,7 @@ class PipelineTasks:
         scraper: ScraperService,
         base_cv: BaseCVService,
         runner_factory: RunnerFactory,
+        submitter: SubmitService,
         scorer: Scorer | None = None,
         tailor: Tailor | None = None,
         filler: FillService | None = None,
@@ -208,12 +212,40 @@ class PipelineTasks:
         self._scraper = scraper
         self._base_cv = base_cv
         self._runner_factory = runner_factory
+        self._submitter = submitter
         self._scorer = scorer
         self._tailor = tailor
         self._filler = filler
 
     def handlers(self) -> dict[str, Callable[[QueueItem], None]]:
-        return {RUN_PIPELINE_TASK: self.run_pipeline, RUN_JOB_TASK: self.run_job}
+        return {
+            RUN_PIPELINE_TASK: self.run_pipeline,
+            RUN_JOB_TASK: self.run_job,
+            REVIEW_DECISION_TASK: self.review_decision,
+        }
+
+    def review_decision(self, item: QueueItem) -> None:
+        """Approve (then submit right away) or reject one filled job."""
+
+        if item.job_id is None:
+            raise ValueError("review_decision queue item has no job_id")
+        decision = Decision(str(item.payload.get("decision")))
+        settings = RuntimeSettings.model_validate(self._store.read_settings())
+        target = JobStatus.APPROVED if decision == Decision.APPROVE else JobStatus.SKIPPED
+        steps = [
+            PipelineStep(
+                decision.value,
+                frozenset({JobStatus.FILLED}),
+                lambda job_id: StepOutcome(target),
+            )
+        ]
+        if decision == Decision.APPROVE:
+            steps.append(self._submit_step(settings))
+        runner = self._runner_factory(steps)
+        trigger = str(item.payload.get("trigger", "manual"))
+        result = runner.run(run_id=item.run_id, job_id=item.job_id, trigger=trigger)
+        if result == RunResult.ALREADY_RUNNING:
+            raise PipelineBusy("Another pipeline run is in progress")
 
     def run_pipeline(self, item: QueueItem) -> None:
         trigger = str(item.payload.get("trigger", "manual"))
@@ -353,6 +385,8 @@ class PipelineTasks:
                 frozenset({JobStatus.FOUND}),
                 lambda job_id: self._score(job_id, base, settings),
             )
+        if step == "submit":
+            return self._submit_step(settings)
         if step == "tailor":
             return PipelineStep(
                 "tailor",
@@ -409,4 +443,13 @@ class PipelineTasks:
             job_url=job.url,
             profile=self._store.get_profile(),
             cv=self._store.cv_for_job(job_id) or base,
+        )
+
+    def _submit_step(self, settings: RuntimeSettings) -> PipelineStep:
+        return PipelineStep(
+            "submit",
+            frozenset({JobStatus.APPROVED}),
+            lambda job_id: self._submitter.run(
+                job_id=job_id, daily_cap=settings.batch_daily_cap, lane="batch"
+            ),
         )

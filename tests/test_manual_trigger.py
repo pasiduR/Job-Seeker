@@ -61,7 +61,7 @@ def test_run_now_queues_all_steps_with_manual_trigger() -> None:
             "task": RUN_PIPELINE_TASK,
             "job_id": None,
             "payload": {
-                "steps": ["find_sources", "scrape", "score", "tailor", "fill"],
+                "steps": ["find_sources", "scrape", "score", "tailor", "fill", "submit"],
                 "trigger": "manual",
             },
         }
@@ -89,7 +89,7 @@ def test_single_step_and_job_runs_do_not_double_queue() -> None:
 
 def test_unknown_step_is_rejected() -> None:
     with pytest.raises(ValueError):
-        ManualTrigger(MemoryTriggerQueue()).run_now("submit")
+        ManualTrigger(MemoryTriggerQueue()).run_now("deploy")
 
 
 class RecordingConnection:

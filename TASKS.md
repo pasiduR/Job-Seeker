@@ -122,10 +122,11 @@ Goal: filled applications reach the review queue, and I approve them before anyt
   - Done: `app/dashboard/templates/review.html`, `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/templates/base.html`, `app/dashboard/static/style.css`, `tests/test_review_page.py`, `tests/test_dashboard_pages.py`, added `/review` listing `filled` jobs with the final screenshot (served only from `data/screenshots/`), every answer with its source, flagged rows highlighted (code flags, drafted, unknown), the CV diff or "base CV used", and Approve / Reject buttons (handled by the Approve task). "Run for this job" now also shows for `tailored` jobs.
 - [x] `notify/`: Telegram bot or ntfy push with title, company, score, screenshot link, and Approve / Reject buttons
   - Done: `app/notify/channels.py`, `app/notify/service.py`, `app/notify/__main__.py`, `app/triggers/review.py`, `app/steps/fill.py`, `app/config.py`, `app/dashboard/templates/settings.html`, `tests/test_notify.py`, `tests/fixtures/telegram_updates.json`, `tests/test_fill_step.py`, added `python -m app.notify`: sends pending `notifications` (filled jobs get a `review` message with title, company, score, and a dashboard link from the new `dashboard_url` setting; LinkedIn jobs get `apply_manually`), retries failed sends up to 3 times, and with Telegram long-polls Approve / Reject taps (only from `TELEGRAM_CHAT_ID`) and queues them as `review_decision` items. ntfy has no safe callback, so its button opens the review page. Errors never contain the bot token. The worker side of decisions is the next task.
-- [~] Approve sends the job to submit right away; Reject sets it to `skipped`
+- [x] Approve sends the job to submit right away; Reject sets it to `skipped`
+  - Done: `app/queue/tasks.py`, `app/queue/__main__.py`, `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/__main__.py`, `app/triggers/manual.py`, `tests/test_worker_tasks.py`, `tests/test_review_page.py`, trigger/dashboard tests, dashboard and Telegram decisions queue a `review_decision` item; the worker runs it through `pipeline_runner` (filled -> approved -> submit at once with `batch_daily_cap`, or filled -> skipped) and ignores jobs that are no longer `filled`. Added a `submit` pipeline step so approved jobs held back by the daily cap are submitted by a later run.
 
 ### Tests and evals
-- [ ] Form-mapper eval set (10–20 real form HTML fixtures) checking schema validity, no guesses, and correct `unknown` answers
+- [~] Form-mapper eval set (10–20 real form HTML fixtures) checking schema validity, no guesses, and correct `unknown` answers
 - [ ] Tests for submit guards (no double-applying, approval required) and for stop conditions
 
 ---

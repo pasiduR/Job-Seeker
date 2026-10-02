@@ -7,7 +7,8 @@ import pytest
 from app.dashboard import pages
 from app.dashboard.repository import PostgresDashboardStore, ReviewItem
 from app.steps.form_mapper import RESUME_UPLOAD
-from tests.test_dashboard_pages import AUTH, MemoryDashboardStore, make_client, store  # noqa: F401
+from tests.test_dashboard_pages import AUTH, MemoryDashboardStore, make_client, post, store  # noqa: F401
+from tests.test_manual_trigger import MemoryTriggerQueue
 
 
 def review_item(job_id: int, screenshot: str | None, diff: str | None = "-old\n+new") -> ReviewItem:
@@ -106,3 +107,24 @@ def test_postgres_review_items_only_include_filled_jobs() -> None:
     assert item.answers == [{"label": "Email"}] and item.cv_diff is None
     assert "WHERE j.status = 'filled'" in connection.queries[0]
     assert "f.outcome = 'filled'" in connection.queries[0]
+
+
+def test_approve_and_reject_buttons_queue_review_decisions(
+    store: MemoryDashboardStore, tmp_path: Path  # noqa: F811
+) -> None:
+    queue = MemoryTriggerQueue()
+    client = make_client(store, tmp_path, queue=queue)
+
+    approved = post(client, "/review/4/approve", {})
+    repeat = post(client, "/review/4/approve", {})
+    rejected = post(client, "/review/5/reject", {})
+    unknown = post(client, "/review/5/submit", {})
+
+    assert approved.headers["location"] == "/review?message=Approve+for+job+4+queued"
+    assert "already+queued" in repeat.headers["location"]
+    assert rejected.headers["location"] == "/review?message=Reject+for+job+5+queued"
+    assert unknown.status_code == 422
+    assert [(item["task"], item["job_id"], item["payload"]["decision"]) for item in queue.items] == [
+        ("review_decision", 4, "approve"),
+        ("review_decision", 5, "reject"),
+    ]

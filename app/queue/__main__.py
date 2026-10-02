@@ -33,6 +33,7 @@ from app.steps.fill import FillService, PostgresFormFillStore, PostgresNotificat
 from app.steps.form_filler import FillLimits, FormFiller
 from app.steps.form_mapper import FormMapper
 from app.steps.latex import LatexCompiler
+from app.steps.submit import PostgresSubmitStore, SubmitService
 from app.steps.scorer import PostgresScoreStore, Scorer
 from app.steps.tailor import PostgresTailoredCVStore, Tailor
 
@@ -140,6 +141,10 @@ def build_tasks(
             store=PostgresBaseCVStore(connection), compiler=LatexCompiler()
         ),
         runner_factory=lambda job_steps: PipelineRunner(pipeline_store, job_steps),
+        submitter=SubmitService(
+            store=PostgresSubmitStore(connection),
+            open_form=lambda url: open_form_page(browser_options(settings), url),
+        ),
         scorer=steps.scorer if steps else None,
         tailor=steps.tailor if steps else None,
         filler=steps.filler if steps else None,

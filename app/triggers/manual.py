@@ -12,7 +12,7 @@ from app.queue.postgres import QueueItem
 
 RUN_PIPELINE_TASK = "run_pipeline"
 RUN_JOB_TASK = "run_job"
-PIPELINE_STEPS = ("find_sources", "scrape", "score", "tailor", "fill")
+PIPELINE_STEPS = ("find_sources", "scrape", "score", "tailor", "fill", "submit")
 
 
 class TriggerQueue(Protocol):

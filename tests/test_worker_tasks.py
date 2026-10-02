@@ -169,6 +169,16 @@ class FixtureFill:
         return StepOutcome(JobStatus.FILLED)
 
 
+class FixtureSubmit:
+    def __init__(self, outcome: JobStatus = JobStatus.SUBMITTED, error: str | None = None) -> None:
+        self.outcome = StepOutcome(outcome, error)
+        self.calls: list[tuple[int, int, str]] = []
+
+    def run(self, *, job_id: int, daily_cap: int, lane: str = "batch") -> StepOutcome:
+        self.calls.append((job_id, daily_cap, lane))
+        return self.outcome
+
+
 class FixtureCompiler:
     def compile(self, tex: str) -> bytes:
         return b"%PDF-1.7"
@@ -188,6 +198,7 @@ def make_tasks(
     *,
     with_llm: bool = True,
     filler: FixtureFill | None = None,
+    submitter: FixtureSubmit | None = None,
 ) -> PipelineTasks:
     base_tex = (project_root / "tests/fixtures/base_cv.tex").read_text(encoding="utf-8")
     base_cv = BaseCVService(store=world, compiler=FixtureCompiler(), storage_dir=tmp_path)
@@ -214,6 +225,7 @@ def make_tasks(
         scraper=ScraperService(world),
         base_cv=base_cv,
         runner_factory=lambda steps: PipelineRunner(world, steps),
+        submitter=submitter or FixtureSubmit(),  # type: ignore[arg-type]
         scorer=scorer,
         tailor=tailor,
         filler=(filler or FixtureFill()) if with_llm else None,  # type: ignore[arg-type]
@@ -339,3 +351,66 @@ def test_needs_manual_job_does_not_stop_the_next_job(
     fill_logs = [log for log in world.logs if log["step"] == "fill"]
     assert fill_logs[0]["error"] == "CAPTCHA detected"
     assert [call[2] for call in filler.calls] == [1, 1]  # base CV when not tailored
+
+
+def filled_world(listings: list[JobListing]) -> MemoryWorld:
+    world = MemoryWorld([], [SearchFilter()])
+    world.save_found(1, listings[0])
+    world.jobs[1]["status"] = JobStatus.FILLED
+    world.settings["batch_daily_cap"] = 4
+    return world
+
+
+def test_approve_submits_right_away(tmp_path: Path, project_root: Path, listings: list[JobListing]) -> None:
+    world = filled_world(listings)
+    submitter = FixtureSubmit()
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=submitter)
+
+    tasks.handlers()["review_decision"](item("review_decision", {"decision": "approve", "trigger": "manual"}, job_id=1))
+
+    assert world.jobs[1]["status"] == JobStatus.SUBMITTED
+    assert submitter.calls == [(1, 4, "batch")]
+    assert [log["step"] for log in world.logs if log["step"] != "pipeline"] == ["approve", "submit"]
+
+
+def test_reject_skips_without_submitting(tmp_path: Path, project_root: Path, listings: list[JobListing]) -> None:
+    world = filled_world(listings)
+    submitter = FixtureSubmit()
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=submitter)
+
+    tasks.review_decision(item("review_decision", {"decision": "reject"}, job_id=1))
+
+    assert world.jobs[1]["status"] == JobStatus.SKIPPED
+    assert submitter.calls == []
+
+
+@pytest.mark.parametrize("status", [JobStatus.TAILORED, JobStatus.SKIPPED, JobStatus.SUBMITTED])
+def test_decisions_only_apply_to_filled_jobs(
+    tmp_path: Path, project_root: Path, listings: list[JobListing], status: JobStatus
+) -> None:
+    world = filled_world(listings)
+    world.jobs[1]["status"] = status
+    submitter = FixtureSubmit()
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=submitter)
+
+    tasks.review_decision(item("review_decision", {"decision": "approve"}, job_id=1))
+
+    assert world.jobs[1]["status"] == status
+    assert submitter.calls == []
+
+
+def test_capped_approval_stays_approved_and_a_later_run_submits(
+    tmp_path: Path, project_root: Path, listings: list[JobListing]
+) -> None:
+    world = filled_world(listings)
+    capped = FixtureSubmit(JobStatus.APPROVED, "batch daily cap of 4 reached")
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, submitter=capped)
+
+    tasks.review_decision(item("review_decision", {"decision": "approve"}, job_id=1))
+    assert world.jobs[1]["status"] == JobStatus.APPROVED
+
+    capped.outcome = StepOutcome(JobStatus.SUBMITTED)
+    later_run = QueueItem(id=2, run_id=UUID(int=2), job_id=None, task="run_pipeline",
+                          payload={"steps": ["submit"]}, attempts=1)
+    tasks.run_pipeline(later_run)
+    assert world.jobs[1]["status"] == JobStatus.SUBMITTED

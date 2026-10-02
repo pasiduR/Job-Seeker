@@ -25,6 +25,7 @@ from app.sources.models import Source, SourceCreate
 from app.steps.base_cv import BaseCVService, CVVersion
 from app.steps.latex import LatexCompileError
 from app.triggers.manual import ManualTrigger
+from app.triggers.review import ReviewDecisions
 from tests.test_manual_trigger import MemoryTriggerQueue
 
 
@@ -155,7 +156,8 @@ def make_client(
     compiler: FixtureCompiler | None = None,
     queue: MemoryTriggerQueue | None = None,
 ) -> TestClient:
-    trigger = ManualTrigger(queue or MemoryTriggerQueue())
+    trigger_queue = queue or MemoryTriggerQueue()
+    trigger = ManualTrigger(trigger_queue)
 
     @contextmanager
     def factory() -> Iterator[DashboardRepos]:
@@ -163,6 +165,7 @@ def make_client(
             store=store,
             base_cv=BaseCVService(store=store, compiler=compiler or FixtureCompiler(), storage_dir=tmp_path),
             trigger=trigger,
+            decisions=ReviewDecisions(trigger_queue),
         )
 
     app = create_app(
@@ -366,14 +369,14 @@ def test_run_now_queues_full_pipeline_or_single_step(store: MemoryDashboardStore
     full = post(client, "/run", {"step": "all", "back": "/"})
     single = post(client, "/run", {"step": "score", "back": "/jobs"})
     repeat = post(client, "/run", {"step": "score", "back": "/jobs"})
-    unknown = post(client, "/run", {"step": "submit", "back": "/"})
+    unknown = post(client, "/run", {"step": "deploy", "back": "/"})
 
     assert full.headers["location"].startswith("/?message=Full+pipeline+queued")
     assert single.headers["location"].startswith("/jobs?message=")
     assert "already+queued" in repeat.headers["location"]
     assert "Unknown+step" in unknown.headers["location"]
     assert [item["payload"]["steps"] for item in queue.items] == [
-        ["find_sources", "scrape", "score", "tailor", "fill"],
+        ["find_sources", "scrape", "score", "tailor", "fill", "submit"],
         ["score"],
     ]
 
