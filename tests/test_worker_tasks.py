@@ -8,7 +8,7 @@ from uuid import UUID
 import pytest
 
 from app.llm.schemas import ScorerOutput
-from app.queue.pipeline_runner import PipelineRunner
+from app.queue.pipeline_runner import PipelineRunner, StepOutcome
 from app.queue.postgres import QueueItem
 from app.queue.state_machine import JobStatus
 from app.queue.tasks import PipelineBusy, PipelineNotReady, PipelineTasks, WorkerJob
@@ -56,7 +56,15 @@ class MemoryWorld:
 
     def get_job(self, job_id: int) -> WorkerJob:
         job = self.jobs[job_id]
-        return WorkerJob(id=job_id, description=job["description"], score=job["score"])
+        return WorkerJob(
+            id=job_id, description=job["description"], score=job["score"], url=job["url"]
+        )
+
+    def get_profile(self) -> dict[str, Any]:
+        return {"first_name": "Jane"}
+
+    def cv_for_job(self, job_id: int) -> CVVersion | None:
+        return None
 
     def read_settings(self) -> dict[str, Any]:
         return dict(self.settings)
@@ -148,6 +156,19 @@ class SequencedScorerClient:
         return ScorerOutput(score=self.scores[description], reasons=["fixture"], missing_skills=[])
 
 
+class FixtureFill:
+    """Fills every job except those whose URL contains "blocked"."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, str, int]] = []
+
+    def run(self, *, job_id: int, job_url: str, profile: dict[str, Any], cv: CVVersion) -> StepOutcome:
+        self.calls.append((job_id, job_url, cv.id))
+        if "blocked" in job_url:
+            return StepOutcome(JobStatus.NEEDS_MANUAL, "CAPTCHA detected")
+        return StepOutcome(JobStatus.FILLED)
+
+
 class FixtureCompiler:
     def compile(self, tex: str) -> bytes:
         return b"%PDF-1.7"
@@ -166,6 +187,7 @@ def make_tasks(
     project_root: Path,
     *,
     with_llm: bool = True,
+    filler: FixtureFill | None = None,
 ) -> PipelineTasks:
     base_tex = (project_root / "tests/fixtures/base_cv.tex").read_text(encoding="utf-8")
     base_cv = BaseCVService(store=world, compiler=FixtureCompiler(), storage_dir=tmp_path)
@@ -194,6 +216,7 @@ def make_tasks(
         runner_factory=lambda steps: PipelineRunner(world, steps),
         scorer=scorer,
         tailor=tailor,
+        filler=(filler or FixtureFill()) if with_llm else None,  # type: ignore[arg-type]
     )
 
 
@@ -260,7 +283,7 @@ def test_run_job_advances_one_job(tmp_path: Path, project_root: Path, listings: 
 
     tasks.run_job(item("run_job", {"trigger": "manual"}, job_id=1))
 
-    assert world.jobs[1]["status"] == JobStatus.TAILORED
+    assert world.jobs[1]["status"] == JobStatus.FILLED
     assert world.jobs[1]["score"] == 8
 
 
@@ -293,3 +316,26 @@ def test_busy_pipeline_is_retried_by_the_queue(tmp_path: Path, project_root: Pat
 
     with pytest.raises(PipelineBusy):
         tasks.run_job(item("run_job", {}, job_id=1))
+
+
+def test_needs_manual_job_does_not_stop_the_next_job(
+    tmp_path: Path, project_root: Path, listings: list[JobListing]
+) -> None:
+    world = MemoryWorld([], [SearchFilter()])
+    filler = FixtureFill()
+    tasks = make_tasks(world, FixtureBoards([]), tmp_path, project_root, filler=filler)
+    blocked = listings[0].model_copy(update={"url": "https://jobs.example.com/blocked"})
+    world.save_found(1, blocked)
+    world.save_found(1, listings[1].model_copy(update={"title": "Second"}))
+    for job in world.jobs.values():
+        job["status"] = JobStatus.TAILORED
+
+    tasks.run_pipeline(item("run_pipeline", {"steps": ["fill"], "trigger": "manual"}))
+
+    assert [job["status"] for job in world.jobs.values()] == [
+        JobStatus.NEEDS_MANUAL,
+        JobStatus.FILLED,
+    ]
+    fill_logs = [log for log in world.logs if log["step"] == "fill"]
+    assert fill_logs[0]["error"] == "CAPTCHA detected"
+    assert [call[2] for call in filler.calls] == [1, 1]  # base CV when not tailored

@@ -10,6 +10,7 @@ from time import sleep
 
 from psycopg import Connection
 
+from app.browser.session import BrowserOptions, open_form_page
 from app.config import RuntimeSettings, SecretSettings
 from app.db.connection import open_pool
 from app.http import HttpClient
@@ -28,6 +29,9 @@ from app.sources.models import SourceRepository
 from app.sources.rss import RemoteBoardSource
 from app.sources.scraper import PostgresJobStore, ScraperService
 from app.steps.base_cv import BaseCVService, PostgresBaseCVStore
+from app.steps.fill import FillService, PostgresFormFillStore
+from app.steps.form_filler import FillLimits, FormFiller
+from app.steps.form_mapper import FormMapper
 from app.steps.latex import LatexCompiler
 from app.steps.scorer import PostgresScoreStore, Scorer
 from app.steps.tailor import PostgresTailoredCVStore, Tailor
@@ -37,6 +41,7 @@ HTTP_TIMEOUT_SECONDS = 30.0
 JOBSPY_TIMEOUT_SECONDS = 120.0
 IMAP_TIMEOUT_SECONDS = 30.0
 CAREER_PAGE_TIMEOUT_SECONDS = 30.0
+APPLICATION_BROWSER_PROFILE = "applications"
 
 
 @dataclass(frozen=True)
@@ -44,6 +49,7 @@ class LLMSteps:
     scorer: Scorer
     tailor: Tailor
     career_pages: CareerPageSource
+    filler: FillService
 
 
 def email_alerts(secrets: SecretSettings) -> EmailAlertSource | None:
@@ -88,6 +94,24 @@ def llm_steps(
             llm=llm,
             model=settings.llm_model,
         ),
+        filler=FillService(
+            filler=FormFiller(
+                llm=llm,
+                mapper=FormMapper(llm=llm, model=settings.llm_model),
+                model=settings.llm_model,
+                limits=FillLimits.from_settings(settings),
+            ),
+            store=PostgresFormFillStore(connection),
+            open_form=lambda url: open_form_page(browser_options(settings), url),
+        ),
+    )
+
+
+def browser_options(settings: RuntimeSettings) -> BrowserOptions:
+    return BrowserOptions(
+        profile=APPLICATION_BROWSER_PROFILE,
+        headless=settings.browser_headless,
+        timeout_seconds=settings.browser_timeout_seconds,
     )
 
 
@@ -117,6 +141,7 @@ def build_tasks(
         runner_factory=lambda job_steps: PipelineRunner(pipeline_store, job_steps),
         scorer=steps.scorer if steps else None,
         tailor=steps.tailor if steps else None,
+        filler=steps.filler if steps else None,
     )
 
 

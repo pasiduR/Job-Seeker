@@ -65,6 +65,17 @@ def open_browser(options: BrowserOptions) -> Iterator[Any]:
             context.close()
 
 
+@contextmanager
+def open_form_page(options: BrowserOptions, url: str) -> Iterator[Any]:
+    """Open ``url`` in the persistent browser and yield a fill-ready page."""
+
+    from app.browser.page import PlaywrightFormPage
+
+    with open_browser(options) as page:
+        goto(page, url, timeout_ms=options.timeout_ms)
+        yield PlaywrightFormPage(page, timeout_ms=options.timeout_ms)
+
+
 class NavigablePage(Protocol):
     def goto(self, url: str, **kwargs: Any) -> Any: ...
 

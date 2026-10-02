@@ -52,7 +52,7 @@ def test_without_an_api_key_llm_steps_stay_unwired() -> None:
     assert entrypoint.llm_steps(connection, secrets, RuntimeSettings()) is None  # type: ignore[arg-type]
 
     tasks = entrypoint.build_tasks(connection, RuntimeSettings(), secrets)  # type: ignore[arg-type]
-    assert tasks._scorer is None and tasks._tailor is None
+    assert tasks._scorer is None and tasks._tailor is None and tasks._filler is None
     assert tasks._dispatcher._career_pages is None
 
 
@@ -67,6 +67,9 @@ def test_with_an_api_key_the_worker_gets_scorer_tailor_and_career_pages() -> Non
     assert tasks._dispatcher._career_pages is not None
     assert tasks._dispatcher._career_pages._model == "claude-sonnet-4-6"
     assert tasks._dispatcher._jobspy_results_wanted == 15
+    assert tasks._filler is not None
+    assert tasks._filler._filler._model == "claude-sonnet-4-6"
+    assert entrypoint.browser_options(settings).headless is False
 
 
 def test_wired_scorer_logs_the_call_and_saves_the_score(

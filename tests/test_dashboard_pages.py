@@ -363,7 +363,7 @@ def test_run_now_queues_full_pipeline_or_single_step(store: MemoryDashboardStore
     assert "already+queued" in repeat.headers["location"]
     assert "Unknown+step" in unknown.headers["location"]
     assert [item["payload"]["steps"] for item in queue.items] == [
-        ["find_sources", "scrape", "score", "tailor"],
+        ["find_sources", "scrape", "score", "tailor", "fill"],
         ["score"],
     ]
 

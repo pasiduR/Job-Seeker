@@ -24,14 +24,19 @@ from app.sources.models import Source, SourceRepository, SourceType
 from app.sources.scraper import ScraperService, SearchFilter
 from app.sources.types import JobListing
 from app.steps.base_cv import BaseCVService, CVVersion
+from app.steps.fill import FillService
 from app.steps.latex import latex_to_text
 from app.steps.scorer import Scorer
 from app.steps.tailor import Tailor, TailorSettings
 from app.triggers.manual import RUN_JOB_TASK, RUN_PIPELINE_TASK
 
 
-JOB_STEPS = ("score", "tailor")
-_STEP_STATUSES = {"score": JobStatus.FOUND, "tailor": JobStatus.SCORED}
+JOB_STEPS = ("score", "tailor", "fill")
+_STEP_STATUSES = {
+    "score": JobStatus.FOUND,
+    "tailor": JobStatus.SCORED,
+    "fill": JobStatus.TAILORED,
+}
 
 
 class PipelineBusy(RuntimeError):
@@ -47,6 +52,7 @@ class WorkerJob:
     id: int
     description: str
     score: int | None
+    url: str = ""
 
 
 class WorkerStore(Protocol):
@@ -57,6 +63,10 @@ class WorkerStore(Protocol):
     def job_ids_with_status(self, statuses: Collection[JobStatus]) -> list[int]: ...
 
     def get_job(self, job_id: int) -> WorkerJob: ...
+
+    def get_profile(self) -> dict[str, Any]: ...
+
+    def cv_for_job(self, job_id: int) -> CVVersion | None: ...
 
     def read_settings(self) -> dict[str, Any]: ...
 
@@ -120,12 +130,28 @@ class PostgresWorkerStore:
 
     def get_job(self, job_id: int) -> WorkerJob:
         rows = self._rows(
-            "SELECT id, description, score FROM jobs WHERE id = %s", (job_id,)
+            "SELECT id, description, score, url FROM jobs WHERE id = %s", (job_id,)
         )
         if not rows:
             raise LookupError(f"Job {job_id} does not exist")
         row = rows[0]
-        return WorkerJob(id=int(row[0]), description=str(row[1]), score=row[2])
+        return WorkerJob(
+            id=int(row[0]), description=str(row[1]), score=row[2], url=str(row[3])
+        )
+
+    def get_profile(self) -> dict[str, Any]:
+        rows = self._rows("SELECT data FROM profile WHERE id = 1")
+        return dict(rows[0][0]) if rows else {}
+
+    def cv_for_job(self, job_id: int) -> CVVersion | None:
+        """The job's tailored CV; None when it reuses the base CV."""
+
+        rows = self._rows(
+            "SELECT id, tex, pdf_path FROM cv_versions WHERE job_id = %s", (job_id,)
+        )
+        if not rows:
+            return None
+        return CVVersion(id=int(rows[0][0]), tex=str(rows[0][1]), pdf_path=str(rows[0][2]))
 
     def read_settings(self) -> dict[str, Any]:
         with self._connection.transaction():
@@ -159,8 +185,8 @@ RunnerFactory = Callable[[Sequence[PipelineStep]], PipelineRunner]
 class PipelineTasks:
     """Handlers for ``run_pipeline`` and ``run_job`` queue items.
 
-    ``scorer`` and ``tailor`` are None when ANTHROPIC_API_KEY is missing;
-    LLM steps then fail the queue item, never the jobs.
+    ``scorer``, ``tailor``, and ``filler`` are None when ANTHROPIC_API_KEY is
+    missing; LLM steps then fail the queue item, never the jobs.
     """
 
     def __init__(
@@ -174,6 +200,7 @@ class PipelineTasks:
         runner_factory: RunnerFactory,
         scorer: Scorer | None = None,
         tailor: Tailor | None = None,
+        filler: FillService | None = None,
     ) -> None:
         self._store = store
         self._finder = finder
@@ -183,6 +210,7 @@ class PipelineTasks:
         self._runner_factory = runner_factory
         self._scorer = scorer
         self._tailor = tailor
+        self._filler = filler
 
     def handlers(self) -> dict[str, Callable[[QueueItem], None]]:
         return {RUN_PIPELINE_TASK: self.run_pipeline, RUN_JOB_TASK: self.run_job}
@@ -289,6 +317,7 @@ class PipelineTasks:
             for step in job_steps
             if (step == "score" and self._scorer is None)
             or (step == "tailor" and self._tailor is None)
+            or (step == "fill" and self._filler is None)
         ]
         if missing:
             raise PipelineNotReady(
@@ -324,10 +353,16 @@ class PipelineTasks:
                 frozenset({JobStatus.FOUND}),
                 lambda job_id: self._score(job_id, base, settings),
             )
+        if step == "tailor":
+            return PipelineStep(
+                "tailor",
+                frozenset({JobStatus.SCORED}),
+                lambda job_id: self._tailor_job(job_id, base, settings),
+            )
         return PipelineStep(
-            "tailor",
-            frozenset({JobStatus.SCORED}),
-            lambda job_id: self._tailor_job(job_id, base, settings),
+            "fill",
+            frozenset({JobStatus.TAILORED}),
+            lambda job_id: self._fill_job(job_id, base),
         )
 
     def _score(self, job_id: int, base: CVVersion, settings: RuntimeSettings) -> StepOutcome:
@@ -365,3 +400,13 @@ class PipelineTasks:
             ),
         )
         return StepOutcome(decision.status, decision.error)
+
+    def _fill_job(self, job_id: int, base: CVVersion) -> StepOutcome:
+        assert self._filler is not None
+        job = self._store.get_job(job_id)
+        return self._filler.run(
+            job_id=job_id,
+            job_url=job.url,
+            profile=self._store.get_profile(),
+            cv=self._store.cv_for_job(job_id) or base,
+        )

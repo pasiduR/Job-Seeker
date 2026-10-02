@@ -61,7 +61,7 @@ def test_run_now_queues_all_steps_with_manual_trigger() -> None:
             "task": RUN_PIPELINE_TASK,
             "job_id": None,
             "payload": {
-                "steps": ["find_sources", "scrape", "score", "tailor"],
+                "steps": ["find_sources", "scrape", "score", "tailor", "fill"],
                 "trigger": "manual",
             },
         }
