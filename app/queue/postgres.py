@@ -129,6 +129,15 @@ class PostgresQueue:
                 (item.id, worker_id),
             )
 
+    def defer(self, item: QueueItem, worker_id: str) -> None:
+        with self._connection.transaction():
+            self._connection.execute("""
+                UPDATE queue_jobs SET status = 'queued',
+                    available_at = now() + interval '5 seconds',
+                    attempts = greatest(attempts - 1, 0), locked_at = NULL, locked_by = NULL
+                WHERE id = %s AND status = 'running' AND locked_by = %s
+            """, (item.id, worker_id))
+
     def retry_or_fail(
         self,
         item: QueueItem,

@@ -157,5 +157,8 @@ Goal: the pipeline runs on its own and reacts to new jobs within minutes.
   - Done: dashboard repository/pages/navigation, `observability.html`, `tests/test_observability.py` and fixture; daily cost with unknown-cost counts, failed attempts per step without pipeline double-counting, latest manual-attention reasons; 25 fixture tests passed.
 - [x] Serialize source discovery, scraping and subscription polling with pipeline runs so full runs cannot overlap across workers.
   - Done: worker handler wrappers reuse the existing reentrant Postgres pipeline lock; `tests/test_run_lock.py` verifies locking precedes scraping/polling and releases on success/errors; 27 fixture tests passed.
-- [~] Optional: self-hosted Langfuse trace UI (not a hard dependency)
-- [ ] Tests for schedule triggering, watcher dedupe, and auto-submit conditions
+- [!] Optional: self-hosted Langfuse trace UI (not a hard dependency)
+  - Blocked: self-hosting needs a target VPS and explicit deployment approval; please confirm whether you want this optional service. Existing database logs and dashboard observability work without Langfuse; no dependency added.
+- [x] Preserve queued work while another pipeline holds the run lock; contention must not consume the three failure attempts.
+  - Done: queue `defer`, worker `RetryLater`, `PipelineBusy` handling and lock/queue fixture tests; lock contention stays queued without exhausting failure retries; 25 fixture tests passed.
+- [~] Tests for schedule triggering, watcher dedupe, and auto-submit conditions

@@ -9,6 +9,8 @@ from app.queue.postgres import QueueItem
 
 
 class QueueBackend(Protocol):
+    def defer(self, item: QueueItem, worker_id: str) -> None: ...
+
     def claim(self, worker_id: str) -> QueueItem | None: ...
 
     def succeed(self, item: QueueItem, worker_id: str) -> None: ...
@@ -24,6 +26,10 @@ class QueueBackend(Protocol):
 
 
 TaskHandler = Callable[[QueueItem], None]
+
+
+class RetryLater(RuntimeError):
+    """Temporary contention: defer without consuming a failure attempt."""
 
 
 class Worker:
@@ -50,6 +56,8 @@ class Worker:
         try:
             handler = self._handlers[item.task]
             handler(item)
+        except RetryLater:
+            self._queue.defer(item, self._worker_id)
         except Exception as exc:  # The worker must survive individual task failures.
             self._queue.retry_or_fail(
                 item,

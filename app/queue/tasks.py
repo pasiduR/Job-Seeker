@@ -19,6 +19,7 @@ from app.queue.pipeline_runner import (
 )
 from app.queue.postgres import QueueItem
 from app.queue.state_machine import JobStatus
+from app.queue.worker import RetryLater
 from app.sources.dispatch import (
     SourceDispatcher,
     UnsupportedSource,
@@ -50,7 +51,7 @@ _STEP_STATUSES = {
 }
 
 
-class PipelineBusy(RuntimeError):
+class PipelineBusy(RetryLater):
     """Another run holds the pipeline lock; the queue retries later."""
 
 

@@ -21,6 +21,10 @@ class FakeQueue:
         self.item = item
         self.succeeded: list[int] = []
         self.retried: list[tuple[int, str, int]] = []
+        self.deferred: list[int] = []
+
+    def defer(self, item: QueueItem, worker_id: str) -> None:
+        self.deferred.append(item.id)
 
     def claim(self, worker_id: str) -> QueueItem | None:
         return self.item
