@@ -33,6 +33,9 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 - [x] Sanitizer that strips instruction-like text from scraped content
   - Done: `app/llm/sanitizer.py`, `app/llm/client.py`, `tests/test_sanitizer.py`, `tests/fixtures/malicious_job_description.txt`, added instruction-line removal at the shared LLM trust boundary.
 
+- [!] Concrete `LLMTransport` for the chosen provider in `llm/client.py` (model from settings, key from `LLM_API_KEY`, token usage and cost mapped into `LLMResponse`)
+  - Blocked: no LLM provider is chosen anywhere in the repo (`.env` only has a generic `LLM_API_KEY`). Tell me which provider and model(s) to use for scorer/tailor/extraction, and its per-token prices for cost logging; the transport is small and can be fixture-tested without calls.
+
 ### Sources and scraping
 - [x] Source model and CRUD (types: `job_board`, `ats_board`, `career_page`, `rss`, `email_alert`), with dedupe
   - Done: `app/sources/models.py`, `tests/test_sources_model.py`, `tests/fixtures/source.json`, added typed source CRUD, canonical URL dedupe, and rejection of secrets in stored config.
@@ -74,6 +77,9 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/dashboard/pages.py`, `app/dashboard/repository.py`, `app/dashboard/templates/*.html`, `app/dashboard/app.py`, `app/dashboard/__main__.py`, `app/db/connection.py`, `tests/test_dashboard_pages.py`, `tests/fixtures/dashboard_data.json`, added server-rendered pages with validated forms (sources, filters, base CV compile + PDF download, profile JSON, settings), job status/score filtering, and http(s)-only links for scraped URLs.
 - [x] "Run now" (full pipeline or a single step) and a "Run for this job" button on each job row
   - Done: `app/triggers/manual.py`, `app/queue/postgres.py`, `app/dashboard/pages.py`, `app/dashboard/app.py`, `app/dashboard/repository.py`, `app/dashboard/__main__.py`, `app/dashboard/templates/_run_now.html`, `home.html`, `jobs.html`, `tests/test_manual_trigger.py`, `tests/test_dashboard_pages.py`, buttons enqueue `run_pipeline` (all steps or one) and `run_job` items tagged `trigger: manual`, skipping duplicates already queued or running; executing them is the new worker task below.
+
+### Worker
+- [ ] Worker entrypoint (`python -m app.queue`) that executes `run_pipeline` and `run_job` queue items: Source Finder, a per-source-type scrape dispatcher (jobspy, ATS API, RSS/remote boards, email alerts, career pages) using active `search_filters`, then the scorer and tailor through `pipeline_runner` with jobs, base CV, and settings loaded from the DB
 
 ### Tests and evals
 - [ ] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)
