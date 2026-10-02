@@ -1,0 +1,9 @@
+[
+  ["score_threshold", "8"],
+  ["max_skill_days", "5"],
+  ["max_added_skills", "2"],
+  ["skill_placement", "skills_section"],
+  ["auto_submit", "true"],
+  ["batch_daily_cap", "12"],
+  ["fast_lane_daily_cap", "4"]
+]

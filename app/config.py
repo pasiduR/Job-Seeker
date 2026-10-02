@@ -1,0 +1,96 @@
+"""Application configuration from environment secrets and database settings."""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any, Literal, Protocol
+
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class SettingsTableConnection(Protocol):
+    """Small connection contract needed to read the settings table."""
+
+    def execute(self, query: str) -> Iterable[tuple[str, object]]: ...
+
+
+class SecretSettings(BaseSettings):
+    """Credentials that must only come from the process environment or .env."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    database_url: SecretStr | None = None
+    llm_api_key: SecretStr | None = None
+    gmail_client_id: SecretStr | None = None
+    gmail_client_secret: SecretStr | None = None
+    imap_host: str | None = None
+    imap_username: str | None = None
+    imap_password: SecretStr | None = None
+    telegram_bot_token: SecretStr | None = None
+    telegram_chat_id: SecretStr | None = None
+    ntfy_url: str | None = None
+    ntfy_token: SecretStr | None = None
+
+
+class RuntimeSettings(BaseModel):
+    """Typed operational settings stored in the database."""
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    score_threshold: int = Field(default=7, ge=1, le=10)
+    max_skill_days: int = Field(default=7, ge=0)
+    max_added_skills: int = Field(default=3, ge=0)
+    skill_placement: Literal["skills_section", "currently_learning"] = (
+        "currently_learning"
+    )
+    auto_submit: bool = False
+    batch_daily_cap: int = Field(default=10, ge=0)
+    fast_lane_daily_cap: int = Field(default=5, ge=0)
+
+
+class AppConfig(BaseModel):
+    """Complete application configuration with secrets kept separate."""
+
+    model_config = ConfigDict(frozen=True)
+
+    secrets: SecretSettings
+    settings: RuntimeSettings
+
+
+def _decode_setting(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+
+def read_settings_table(connection: SettingsTableConnection) -> dict[str, object]:
+    """Read key/value settings without giving configuration code broader DB access."""
+
+    rows = connection.execute("SELECT key, value FROM settings")
+    return {key: _decode_setting(value) for key, value in rows}
+
+
+def load_config(
+    connection: SettingsTableConnection | None = None,
+    *,
+    env_file: str | Path = ".env",
+) -> AppConfig:
+    """Load secrets from ``env_file`` and operational values from ``settings``."""
+
+    secrets = SecretSettings(_env_file=env_file)
+    stored_values: dict[str, Any] = (
+        read_settings_table(connection) if connection is not None else {}
+    )
+    runtime_settings = RuntimeSettings.model_validate(stored_values)
+    return AppConfig(secrets=secrets, settings=runtime_settings)
