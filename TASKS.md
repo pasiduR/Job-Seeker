@@ -20,7 +20,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/db/migrations/0001_initial.sql`, `app/db/migrate.py`, `tests/test_migrations.py`, `tests/fixtures/required_tables.txt`, added the complete relational schema and an idempotent transactional migration runner.
 - [x] Job status state machine (`found → scored → tailored → filled → approved → submitted` / `skipped` / `failed` / `needs_manual`) with one function per transition
   - Done: `app/queue/state_machine.py`, `tests/test_state_machine.py`, `tests/fixtures/status_transitions.json`, added pure idempotent transition functions and rejection of invalid workflow jumps.
-- [ ] Postgres-backed queue, worker, and `pipeline_runner` with locking so runs never overlap or repeat, plus `run_logs` entries
+- [x] Postgres-backed queue, worker, and `pipeline_runner` with locking so runs never overlap or repeat, plus `run_logs` entries
+  - Done: `app/queue/postgres.py`, `app/queue/worker.py`, `app/queue/pipeline_runner.py`, `tests/test_queue.py`, `tests/fixtures/queue_job.json`, added atomic queue claims, contained retries, advisory run locking, status ownership, and run logging.
 - [ ] Shared HTTP helper with timeout, retry with backoff (max 3), and per-source rate limiting
 
 ### LLM layer

@@ -1,0 +1,8 @@
+{
+  "id": 41,
+  "run_id": "cd2b2163-9c35-48c8-a195-e66c9389c01f",
+  "job_id": 17,
+  "task": "pipeline",
+  "payload": {"steps": ["score", "tailor"]},
+  "attempts": 1
+}
