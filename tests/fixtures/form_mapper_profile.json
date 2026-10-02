@@ -1,0 +1,12 @@
+{
+  "first_name": "Jane",
+  "last_name": "Perera",
+  "email": "jane.perera@example.com",
+  "phone": "+94 77 123 4567",
+  "location": {"city": "Colombo", "country": "Sri Lanka"},
+  "links": {"github": "https://github.com/janeperera"},
+  "work_authorization": {"uk_right_to_work": false, "requires_visa_sponsorship": true},
+  "expected_salary": "60000 GBP",
+  "willing_to_relocate": true,
+  "writing_samples": ["I like building small, reliable services."]
+}
