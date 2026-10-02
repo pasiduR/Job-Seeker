@@ -38,7 +38,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/sources/models.py`, `tests/test_sources_model.py`, `tests/fixtures/source.json`, added typed source CRUD, canonical URL dedupe, and rejection of secrets in stored config.
 - [x] `sources/jobspy.py`: Indeed, Glassdoor, and other big boards at low volume
   - Done: `app/sources/jobspy.py`, `app/sources/types.py`, `tests/test_jobspy.py`, `tests/fixtures/jobspy_records.json`, added bounded low-volume JobSpy searches, normalized listings, and an explicit LinkedIn block.
-- [ ] `sources/ats_api.py`: public JSON APIs for Greenhouse, Lever, and Ashby
+- [x] `sources/ats_api.py`: public JSON APIs for Greenhouse, Lever, and Ashby
+  - Done: `app/sources/ats_api.py`, `tests/test_ats_api.py`, `tests/fixtures/ats_responses.json`, added public Greenhouse, Lever, and Ashby fetchers with normalized job records.
 - [ ] `sources/rss.py`: remote boards (Remotive, RemoteOK, Arbeitnow APIs, plus RSS)
 - [ ] `sources/email_alert.py`: LinkedIn alert emails via Gmail API or IMAP, parsing job links (no LinkedIn scraping)
 - [ ] `sources/career_page.py`: fetch with Crawl4AI or Playwright, then LLM listing extraction (`listing_extract_v1.md`)

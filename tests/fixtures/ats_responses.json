@@ -1,0 +1,38 @@
+{
+  "greenhouse": {
+    "jobs": [
+      {
+        "id": 101,
+        "title": "Platform Engineer",
+        "absolute_url": "https://boards.greenhouse.io/example/jobs/101",
+        "content": "<p>Build &amp; operate <strong>Python</strong> services.</p>",
+        "location": {"name": "Remote - Europe"},
+        "updated_at": "2026-10-01T10:00:00Z"
+      }
+    ]
+  },
+  "lever": [
+    {
+      "id": "lever-202",
+      "text": "Backend Engineer",
+      "hostedUrl": "https://jobs.lever.co/example/lever-202",
+      "descriptionPlain": "Develop backend systems.",
+      "categories": {"location": "Colombo"},
+      "workplaceType": "hybrid",
+      "createdAt": 1790848800000
+    }
+  ],
+  "ashby": {
+    "jobs": [
+      {
+        "id": "ashby-303",
+        "title": "Software Engineer",
+        "jobUrl": "https://jobs.ashbyhq.com/example/ashby-303",
+        "descriptionPlain": "Ship reliable product features.",
+        "location": "Anywhere",
+        "isRemote": true,
+        "publishedAt": "2026-10-01T09:00:00Z"
+      }
+    ]
+  }
+}
