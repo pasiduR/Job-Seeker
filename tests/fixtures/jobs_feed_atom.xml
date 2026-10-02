@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Acme careers</title>
+  <entry>
+    <id>urn:acme:job:42</id>
+    <title>Site Reliability Engineer</title>
+    <link rel="alternate" href="https://acme.example/jobs/42"/>
+    <published>2026-09-30T08:00:00Z</published>
+    <summary type="html">&lt;p&gt;Run &lt;b&gt;Kubernetes&lt;/b&gt; clusters.&lt;/p&gt;</summary>
+  </entry>
+  <entry>
+    <title>Data Engineer</title>
+    <link href="https://acme.example/jobs/43"/>
+    <updated>2026-09-29T08:00:00Z</updated>
+    <content type="html">Build pipelines.</content>
+  </entry>
+</feed>

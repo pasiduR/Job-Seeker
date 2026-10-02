@@ -85,7 +85,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/sources/email_alert.py`, `app/sources/dispatch.py`, `app/queue/__main__.py`, `tests/test_email_alert.py`, `tests/test_source_dispatch.py`, `tests/fixtures/linkedin_alert_cards.eml`, parsed alert job cards (HTML first, plain-text fallback) into listings with a short email-only description, and wired them into the worker when IMAP settings exist. The card format is inferred, not checked against a real alert email.
 
 ### Tests and evals
-- [ ] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)
+- [x] Fixture tests for each source parser, the dedupe, the state machine, and the queue (no live network calls)
+  - Done: `tests/test_parser_edge_cases.py`, `tests/fixtures/jobs_feed_atom.xml`, audited existing parser/dedupe/state-machine/queue tests and filled gaps: Atom feeds, malformed feed and ATS payloads, JobSpy retry limit, store-level duplicates, queue backoff/final failure, unknown worker tasks, and pipeline stop after skip.
 - [ ] Eval sets of 10–20 fixtures each for the scorer and the tailor (tailor checks: no invented entities, LaTeX compiles, N/M limits)
 
 ---
