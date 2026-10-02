@@ -10,7 +10,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
 ### Foundation
 - [x] Project skeleton matching the `AGENTS.md` layout (`app/`, `tests/fixtures/`, `tests/evals/`)
   - Done: `app/` package directories, `tests/fixtures/`, `tests/evals/`, `tests/conftest.py`, `tests/test_project_layout.py`, added and verified the prescribed project layout.
-- [ ] `pyproject.toml` (Python 3.11+, Pydantic, Playwright, python-jobspy, Crawl4AI, DB driver)
+- [x] `pyproject.toml` (Python 3.11+, Pydantic, Playwright, python-jobspy, Crawl4AI, DB driver)
+  - Done: `pyproject.toml`, `tests/conftest.py`, `tests/test_project_metadata.py`, declared Python 3.11+, required runtime packages, and pytest configuration with metadata tests.
 - [ ] `.env.example` and a `.gitignore` covering `.env`, CVs, screenshots, and browser profiles
 - [ ] `config.py`: load `.env` secrets plus the `settings` table, with defaults for threshold, N=7, M=3, placement=`currently_learning`, auto-submit=off, and daily caps
 - [ ] Neon DB migrations for every table: `sources`, `search_filters`, `subscriptions`, `schedules`, `jobs`, `cv_versions`, `applications` (unique `job_id`), `skills_to_learn`, `profile`, `queue_jobs`, `notifications`, `run_logs`, `settings`, `llm_calls`, `form_traces`
