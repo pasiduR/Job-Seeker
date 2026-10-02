@@ -1,0 +1,13 @@
+[Unit]
+Description=Virtual display for headed Job Seeker Chromium
+
+[Service]
+User=job-seeker
+Group=job-seeker
+ExecStart=/usr/bin/Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

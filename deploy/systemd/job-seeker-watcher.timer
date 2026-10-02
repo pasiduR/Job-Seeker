@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Job Seeker subscriptions each minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+Unit=job-seeker-watcher.service
+
+[Install]
+WantedBy=timers.target

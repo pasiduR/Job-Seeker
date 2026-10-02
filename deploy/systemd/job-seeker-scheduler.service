@@ -1,0 +1,17 @@
+[Unit]
+Description=Enqueue due Job Seeker schedules
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=job-seeker
+Group=job-seeker
+WorkingDirectory=/var/lib/job-seeker
+EnvironmentFile=/etc/job-seeker/.env
+ExecStart=/opt/job-seeker/.venv/bin/python -m app.triggers.scheduler
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/job-seeker

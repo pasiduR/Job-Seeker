@@ -1,0 +1,25 @@
+[Unit]
+Description=Job Seeker queue worker
+After=network-online.target job-seeker-display.service
+Wants=network-online.target
+Requires=job-seeker-display.service
+
+[Service]
+User=job-seeker
+Group=job-seeker
+WorkingDirectory=/var/lib/job-seeker
+EnvironmentFile=/etc/job-seeker/.env
+Environment=DISPLAY=:99
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/job-seeker/.venv/bin/python -m app.queue
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=180
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/job-seeker
+
+[Install]
+WantedBy=multi-user.target

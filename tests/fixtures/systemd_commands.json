@@ -1,0 +1,1 @@
+{"worker": "app.queue", "scheduler": "app.triggers.scheduler", "watcher": "app.triggers.watcher", "notify": "app.notify"}

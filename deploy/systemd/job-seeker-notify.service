@@ -1,0 +1,21 @@
+[Unit]
+Description=Job Seeker review notifications and Telegram decisions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=job-seeker
+Group=job-seeker
+WorkingDirectory=/var/lib/job-seeker
+EnvironmentFile=/etc/job-seeker/.env
+ExecStart=/opt/job-seeker/.venv/bin/python -m app.notify
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/job-seeker
+
+[Install]
+WantedBy=multi-user.target
