@@ -1,0 +1,20 @@
+{
+  "valid": [
+    ["mark_scored", "found", "scored"],
+    ["mark_tailored", "scored", "tailored"],
+    ["mark_filled", "tailored", "filled"],
+    ["mark_approved", "filled", "approved"],
+    ["mark_submitted", "approved", "submitted"],
+    ["mark_skipped", "found", "skipped"],
+    ["mark_skipped", "filled", "skipped"],
+    ["mark_failed", "approved", "failed"],
+    ["mark_needs_manual", "tailored", "needs_manual"]
+  ],
+  "invalid": [
+    ["mark_tailored", "found"],
+    ["mark_submitted", "filled"],
+    ["mark_approved", "skipped"],
+    ["mark_scored", "failed"],
+    ["mark_needs_manual", "submitted"]
+  ]
+}

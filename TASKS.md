@@ -18,7 +18,8 @@ Goal: run the pipeline by hand from the dashboard and get scored jobs plus tailo
   - Done: `app/config.py`, `tests/test_config.py`, `tests/fixtures/config.env`, `tests/fixtures/settings_table_rows.json`, added separated secret/runtime loading, typed defaults, and settings-table overrides.
 - [x] Neon DB migrations for every table: `sources`, `search_filters`, `subscriptions`, `schedules`, `jobs`, `cv_versions`, `applications` (unique `job_id`), `skills_to_learn`, `profile`, `queue_jobs`, `notifications`, `run_logs`, `settings`, `llm_calls`, `form_traces`
   - Done: `app/db/migrations/0001_initial.sql`, `app/db/migrate.py`, `tests/test_migrations.py`, `tests/fixtures/required_tables.txt`, added the complete relational schema and an idempotent transactional migration runner.
-- [ ] Job status state machine (`found → scored → tailored → filled → approved → submitted` / `skipped` / `failed` / `needs_manual`) with one function per transition
+- [x] Job status state machine (`found → scored → tailored → filled → approved → submitted` / `skipped` / `failed` / `needs_manual`) with one function per transition
+  - Done: `app/queue/state_machine.py`, `tests/test_state_machine.py`, `tests/fixtures/status_transitions.json`, added pure idempotent transition functions and rejection of invalid workflow jumps.
 - [ ] Postgres-backed queue, worker, and `pipeline_runner` with locking so runs never overlap or repeat, plus `run_logs` entries
 - [ ] Shared HTTP helper with timeout, retry with backoff (max 3), and per-source rate limiting
 
