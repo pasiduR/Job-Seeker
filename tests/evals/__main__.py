@@ -1,6 +1,6 @@
 """Run the scorer and tailor evals against the real LLM.
 
-``python -m tests.evals [scorer|tailor|all] [--model M] [--baseline FILE]``
+``python -m tests.evals [scorer|tailor|form_mapper|all] [--model M] [--baseline FILE]``
 
 This spends API credit (each run is well under $1 at Sonnet prices). Results
 go to ``tests/evals/results/<prompt_version>__<model>.json`` so a new prompt
@@ -23,8 +23,10 @@ from app.steps.latex import LatexCompiler
 from tests.evals.harness import (
     Compiler,
     EvalReport,
+    evaluate_form_mapper,
     evaluate_scorer,
     evaluate_tailor,
+    offline_field_extractor,
     regressions,
 )
 
@@ -72,6 +74,9 @@ def run_eval(
     client: LLMClient = LLMClient(transport, LLMCallLogger(log))
     if step == "scorer":
         report = evaluate_scorer(client, model=model)
+    elif step == "form_mapper":
+        with offline_field_extractor() as extract:
+            report = evaluate_form_mapper(client, extract, model=model)
     else:
         report = evaluate_tailor(client, compiler, model=model)
     return {
@@ -98,7 +103,9 @@ def compare(baseline_path: Path, result: dict[str, Any]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", choices=["scorer", "tailor", "all"], nargs="?", default="all")
+    parser.add_argument(
+        "step", choices=["scorer", "tailor", "form_mapper", "all"], nargs="?", default="all"
+    )
     parser.add_argument("--model", help="defaults to the llm_model setting")
     parser.add_argument("--baseline", type=Path, help="earlier result JSON to compare against")
     args = parser.parse_args(argv)
@@ -106,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     settings = RuntimeSettings()
     model = args.model or settings.llm_model
     transport = AnthropicTransport.from_config(SecretSettings(), settings)
-    steps = ["scorer", "tailor"] if args.step == "all" else [args.step]
+    steps = ["scorer", "tailor", "form_mapper"] if args.step == "all" else [args.step]
 
     exit_code = 0
     for step in steps:

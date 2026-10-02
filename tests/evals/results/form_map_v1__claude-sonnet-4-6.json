@@ -1,0 +1,26 @@
+{
+  "step": "form_mapper",
+  "model": "claude-sonnet-4-6",
+  "summary": {
+    "prompt_version": "form_map_v1",
+    "cases": 13,
+    "schema_valid": 13,
+    "agreement": 127,
+    "violations": 4,
+    "compiled": 0,
+    "checks": 127
+  },
+  "failures": [
+    "greenhouse-airbnb: discarded 'I acknowledge receipt of the Airbnb Candidate Data Privacy N': legal question not answered from profile",
+    "greenhouse-cloudflare: discarded 'Do you now or will you in the future require immigration spo': invalid value for a combobox field",
+    "lever-palantir: discarded 'Please tell us how you heard about this opportunity. \u2731': profile answer not found in profile",
+    "lever-zoox: discarded 'How did you hear about us? \u2731': profile answer not found in profile"
+  ],
+  "usage": {
+    "calls": 13,
+    "invalid_calls": 0,
+    "input_tokens": 27723,
+    "output_tokens": 5765,
+    "cost_usd": "0.169644"
+  }
+}

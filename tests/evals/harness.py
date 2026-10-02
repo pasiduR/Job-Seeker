@@ -1,21 +1,26 @@
 """Eval harness for the scorer and tailor prompts.
 
-Run against a real LLM (once a transport is configured) to compare prompt
-versions: schema validity, score agreement, and rule violations. The pytest
+Run against a real LLM (``python -m tests.evals``) to compare prompt versions:
+schema validity, agreement with expectations, and rule violations. The pytest
 suite exercises this harness with fixture clients only.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+import re
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+from app.browser.fields import FormField, extract_fields
 from app.llm.client import InvalidLLMOutput
-from app.llm.schemas import ScorerOutput, TailorOutput
+from app.llm.schemas import AnswerSource, FormMapperOutput, ScorerOutput, TailorOutput
 from app.steps.cv_checks import find_invented_entities, find_unsafe_commands
+from app.steps.form_mapper import PROMPT_VERSION as FORM_MAP_PROMPT_VERSION
+from app.steps.form_mapper import FormMapper
 from app.steps.latex import LatexCompileError, latex_to_text
 from app.steps.scorer import PROMPT_VERSION as SCORER_PROMPT_VERSION
 from app.steps.scorer import Scorer
@@ -43,6 +48,7 @@ class EvalReport:
     agreement: int = 0
     violations: int = 0
     compiled: int = 0
+    checks: int = 0
     failures: list[str] = field(default_factory=list)
 
     def summary(self) -> dict[str, Any]:
@@ -53,6 +59,7 @@ class EvalReport:
             "agreement": self.agreement,
             "violations": self.violations,
             "compiled": self.compiled,
+            "checks": self.checks,
         }
 
 
@@ -155,6 +162,86 @@ def evaluate_tailor(client: EvalClient, compiler: Compiler, *, model: str) -> Ev
     return report
 
 
+FieldExtractor = Callable[[str], list[FormField]]
+
+
+@contextmanager
+def offline_field_extractor() -> Iterator[FieldExtractor]:
+    """Render saved form HTML in Chromium with every network request blocked."""
+
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            page = browser.new_page()
+            page.route("**/*", lambda route: route.abort())
+
+            def extract(html: str) -> list[FormField]:
+                page.set_content(html)
+                return extract_fields(page)
+
+            yield extract
+        finally:
+            browser.close()
+
+
+class _RecordingClient:
+    """Keeps the raw (schema-valid) mapper output before code enforcement."""
+
+    def __init__(self, client: EvalClient) -> None:
+        self._client = client
+        self.last: FormMapperOutput | None = None
+
+    def generate(self, **kwargs: Any) -> Any:
+        self.last = self._client.generate(**kwargs)
+        return self.last
+
+
+def evaluate_form_mapper(
+    client: EvalClient, extract: FieldExtractor, *, model: str
+) -> EvalReport:
+    """Violations: raw answers the code had to discard (guesses or rule breaks).
+    Agreement: fields matching the expectations in form_mapper_cases.json."""
+
+    report = EvalReport(prompt_version=FORM_MAP_PROMPT_VERSION)
+    spec = load_cases("form_mapper_cases.json")
+    profile = json.loads((EVALS_DIR / "form_profile.json").read_text(encoding="utf-8"))
+    recorder = _RecordingClient(client)
+    mapper = FormMapper(llm=recorder, model=model)
+    cv_text = latex_to_text(base_cv_tex())
+    for case in spec["cases"]:  # type: ignore[index]
+        report.cases += 1
+        html = (EVALS_DIR / "forms" / case["form"]).read_text(encoding="utf-8")
+        recorder.last = None
+        try:
+            mapped = mapper.run(job_id=0, fields=extract(html), profile=profile, cv_text=cv_text)
+        except InvalidLLMOutput:
+            report.failures.append(f"{case['id']}: invalid schema")
+            continue
+        report.schema_valid += 1
+        raw = {answer.field_id: answer for answer in (recorder.last.answers if recorder.last else [])}
+        rules = spec["rules"] + case["rules"]  # type: ignore[index]
+        for answer in mapped.answers:
+            label = answer.field.label
+            given = raw.get(answer.field.field_id)
+            if given is not None and given.source != AnswerSource.UNKNOWN and answer.is_unknown:
+                report.violations += 1
+                report.failures.append(f"{case['id']}: discarded {label[:60]!r}: {answer.flag}")
+            rule = next((r for r in rules if re.search(r["label"], label, re.IGNORECASE)), None)
+            if rule is None:
+                continue
+            report.checks += 1
+            expected = rule["expect"]
+            if (answer.is_unknown if expected == "unknown" else answer.value == expected):
+                report.agreement += 1
+            else:
+                report.failures.append(
+                    f"{case['id']}: {label[:60]!r} expected {expected!r}, got {answer.value!r}"
+                )
+    return report
+
+
 def regressions(old: EvalReport, new: EvalReport) -> list[str]:
     """Reasons not to ship ``new``; an empty list means it is no worse."""
 
@@ -170,6 +257,8 @@ def regressions(old: EvalReport, new: EvalReport) -> list[str]:
 
 __all__ = [
     "EvalReport",
+    "evaluate_form_mapper",
+    "offline_field_extractor",
     "evaluate_scorer",
     "evaluate_tailor",
     "regressions",

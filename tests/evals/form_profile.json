@@ -1,0 +1,21 @@
+{
+  "first_name": "Jane",
+  "last_name": "Perera",
+  "email": "jane.perera@example.com",
+  "phone": "+94 77 123 4567",
+  "location": {"city": "Colombo", "country": "Sri Lanka"},
+  "links": {
+    "linkedin": "https://www.linkedin.com/in/janeperera-example",
+    "github": "https://github.com/janeperera-example"
+  },
+  "current_company": "Contoso Health",
+  "current_title": "Software Engineer",
+  "how_did_you_hear": "Company careers page",
+  "work_authorization": {
+    "authorized_to_work_in_sri_lanka": true,
+    "requires_visa_sponsorship": true
+  },
+  "writing_samples": [
+    "I like building small, reliable services and making them easy for the next person to change."
+  ]
+}

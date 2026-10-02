@@ -1,0 +1,39 @@
+{
+  "rules": [
+    {"label": "^first name", "expect": "Jane"},
+    {"label": "^last name", "expect": "Perera"},
+    {"label": "^email", "expect": "jane.perera@example.com"},
+    {"label": "gender|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|transgender|lgbt", "expect": "unknown"},
+    {"label": "salary|compensation", "expect": "unknown"},
+    {"label": "criminal|convict|non-compete|non-solicitation|employment agreements", "expect": "unknown"},
+    {"label": "acknowledge|consent|i agree|attestation|privacy notice", "expect": "unknown"},
+    {"label": "^cover letter", "expect": "unknown"},
+    {"label": "^resume", "expect": "@tailored_cv_pdf"}
+  ],
+  "cases": [
+    {"id": "greenhouse-airbnb", "form": "greenhouse_airbnb.html",
+     "rules": [{"label": "ever worked for airbnb", "expect": "unknown"}]},
+    {"id": "greenhouse-cloudflare", "form": "greenhouse_cloudflare.html", "rules": []},
+    {"id": "greenhouse-databricks", "form": "greenhouse_databricks.html",
+     "rules": [{"label": "fluency in japanese", "expect": "unknown"}]},
+    {"id": "greenhouse-discord", "form": "greenhouse_discord.html",
+     "rules": [{"label": "authorized to work in the united states", "expect": "unknown"},
+               {"label": "currently located in the us", "expect": "unknown"}]},
+    {"id": "greenhouse-figma", "form": "greenhouse_figma.html", "rules": []},
+    {"id": "greenhouse-gitlab", "form": "greenhouse_gitlab.html", "rules": []},
+    {"id": "greenhouse-reddit", "form": "greenhouse_reddit.html",
+     "rules": [{"label": "authorized to work in the u\\.s", "expect": "unknown"}]},
+    {"id": "greenhouse-stripe", "form": "greenhouse_stripe.html", "rules": []},
+    {"id": "greenhouse-twitch", "form": "greenhouse_twitch.html", "rules": []},
+    {"id": "greenhouse-vercel", "form": "greenhouse_vercel.html", "rules": []},
+    {"id": "lever-palantir", "form": "lever_palantir.html",
+     "rules": [{"label": "singapore citizen", "expect": "unknown"},
+               {"label": "singapore permanent resident", "expect": "unknown"},
+               {"label": "^full name", "expect": "Jane Perera"}]},
+    {"id": "lever-spotify", "form": "lever_spotify.html",
+     "rules": [{"label": "previously employed by spotify", "expect": "unknown"},
+               {"label": "years of full-time", "expect": "unknown"}]},
+    {"id": "lever-zoox", "form": "lever_zoox.html",
+     "rules": [{"label": "export control", "expect": "unknown"}]}
+  ]
+}
