@@ -45,6 +45,10 @@ class AtsBoards(Protocol):
     def ashby(self, *, board_name: str, company: str) -> list[JobListing]: ...
 
 
+class EmailAlerts(Protocol):
+    def listings(self) -> list[JobListing]: ...
+
+
 class CareerPages(Protocol):
     def discover(self, url: str) -> list[JobListing]: ...
 
@@ -89,12 +93,14 @@ class SourceDispatcher:
         ats: AtsBoards,
         jobspy: JobSpySearch | None = None,
         career_pages: CareerPages | None = None,
+        email_alerts: EmailAlerts | None = None,
         jobspy_results_wanted: int,
     ) -> None:
         self._boards = boards
         self._ats = ats
         self._jobspy = jobspy
         self._career_pages = career_pages
+        self._email_alerts = email_alerts
         self._jobspy_results_wanted = jobspy_results_wanted
 
     def fetch(self, source: Source, search_filter: SearchFilter) -> list[JobListing]:
@@ -116,9 +122,11 @@ class SourceDispatcher:
             if self._career_pages is None:
                 raise UnsupportedSource("Career pages need the LLM listing extractor")
             return self._career_pages.discover(source.url)
-        raise UnsupportedSource(
-            f"Source type {source.type.value!r} is not scraped by the batch runner"
-        )
+        if source.type == SourceType.EMAIL_ALERT:
+            if self._email_alerts is None:
+                raise UnsupportedSource("Email alerts need IMAP settings in .env")
+            return self._email_alerts.listings()
+        raise UnsupportedSource(f"Unknown source type {source.type.value!r}")
 
     def _job_board(self, source: Source, search_filter: SearchFilter) -> list[JobListing]:
         adapter = source.config.get("adapter")

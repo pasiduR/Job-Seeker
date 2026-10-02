@@ -98,7 +98,18 @@ def test_remote_boards_and_rss_use_board_adapters() -> None:
 def test_sources_without_an_adapter_are_reported() -> None:
     subject, _, _, _ = dispatcher()
 
-    with pytest.raises(UnsupportedSource, match="email_alert"):
+    with pytest.raises(UnsupportedSource, match="IMAP"):
         subject.fetch(source(SourceType.EMAIL_ALERT, "imap://inbox"), SearchFilter())
     with pytest.raises(UnsupportedSource, match="LLM"):
         subject.fetch(source(SourceType.CAREER_PAGE, "https://acme.example/careers"), SearchFilter())
+
+
+def test_email_alert_sources_read_the_mailbox_once() -> None:
+    alerts = Recorder()
+    subject, _, _, _ = dispatcher(email_alerts=alerts)
+    alert_source = source(SourceType.EMAIL_ALERT, "imap://inbox")
+
+    subject.fetch(alert_source, SearchFilter())
+
+    assert depends_on_filter(alert_source) is False
+    assert alerts.calls == [("listings", {})]

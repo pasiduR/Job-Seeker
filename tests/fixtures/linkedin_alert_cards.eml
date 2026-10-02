@@ -1,0 +1,57 @@
+From: LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>
+To: seeker@example.com
+Subject: "python engineer": Northwind and 2 more new jobs
+Date: Thu, 01 Oct 2026 05:00:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alert-boundary"
+
+--alert-boundary
+Content-Type: text/plain; charset="UTF-8"
+
+Your job alert for python engineer
+
+Python Engineer
+Northwind Logistics
+Colombo, Western Province, Sri Lanka
+View job: https://www.linkedin.com/comm/jobs/view/111111/?trackingId=abc
+
+---------------------------------------------------------
+
+Backend Engineer (Remote)
+Contoso Health
+Remote
+View job: https://www.linkedin.com/comm/jobs/view/222222/?trackingId=def
+
+---------------------------------------------------------
+
+Data Platform Engineer
+Fabrikam
+View job: https://www.linkedin.com/comm/jobs/view/333333/?trackingId=ghi
+
+--alert-boundary
+Content-Type: text/html; charset="UTF-8"
+
+<html><body>
+<table>
+  <tr><td>
+    <a href="https://www.linkedin.com/comm/jobs/view/111111/?trackingId=abc"><img src="https://media.example/logo1.png" alt=""></a>
+    <a href="https://www.linkedin.com/comm/jobs/view/111111/?trackingId=abc">Python Engineer</a>
+    <p>Northwind Logistics &middot; Colombo, Western Province, Sri Lanka</p>
+    <a href="https://www.linkedin.com/comm/jobs/view/111111/?trackingId=abc">View job</a>
+  </td></tr>
+  <tr><td>
+    <a href="https://www.linkedin.com/comm/jobs/view/222222/?trackingId=def">Backend Engineer (Remote)</a>
+    <p>Contoso Health &middot; Remote</p>
+    <p>Actively recruiting</p>
+  </td></tr>
+  <tr><td>
+    <a href="https://www.linkedin.com/comm/jobs/view/444444/?trackingId=jkl">View job</a>
+  </td></tr>
+  <tr><td>
+    <a href="https://www.linkedin.com/comm/jobs/search?keywords=python">See all jobs</a>
+    <a href="https://www.linkedin.com/comm/psettings/email-unsubscribe">Unsubscribe</a>
+  </td></tr>
+</table>
+</body></html>
+
+--alert-boundary--

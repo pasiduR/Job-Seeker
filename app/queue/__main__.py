@@ -18,6 +18,7 @@ from app.queue.tasks import PipelineTasks, PostgresWorkerStore
 from app.queue.worker import Worker
 from app.sources.ats_api import AtsApiSource
 from app.sources.dispatch import SourceDispatcher
+from app.sources.email_alert import EmailAlertSource, ImapAlertFetcher
 from app.sources.finder import PublicSourceCatalog, SourceFinder
 from app.sources.jobspy import JobSpySource
 from app.sources.models import SourceRepository
@@ -29,9 +30,25 @@ from app.steps.latex import LatexCompiler
 
 HTTP_TIMEOUT_SECONDS = 30.0
 JOBSPY_TIMEOUT_SECONDS = 120.0
+IMAP_TIMEOUT_SECONDS = 30.0
 
 
-def build_tasks(connection: Connection, results_wanted: int) -> PipelineTasks:
+def email_alerts(secrets: SecretSettings) -> EmailAlertSource | None:
+    if not (secrets.imap_host and secrets.imap_username and secrets.imap_password):
+        return None
+    return EmailAlertSource(
+        ImapAlertFetcher(
+            host=secrets.imap_host,
+            username=secrets.imap_username,
+            password=secrets.imap_password.get_secret_value(),
+            timeout_seconds=IMAP_TIMEOUT_SECONDS,
+        )
+    )
+
+
+def build_tasks(
+    connection: Connection, results_wanted: int, secrets: SecretSettings
+) -> PipelineTasks:
     http = HttpClient(
         timeout_seconds=HTTP_TIMEOUT_SECONDS, source_minimum_intervals={}
     )
@@ -46,6 +63,7 @@ def build_tasks(connection: Connection, results_wanted: int) -> PipelineTasks:
             boards=RemoteBoardSource(http),
             ats=AtsApiSource(http),
             jobspy=JobSpySource(timeout_seconds=JOBSPY_TIMEOUT_SECONDS),
+            email_alerts=email_alerts(secrets),
             jobspy_results_wanted=results_wanted,
         ),
         scraper=ScraperService(PostgresJobStore(connection)),
@@ -74,7 +92,7 @@ def main() -> None:
             settings = RuntimeSettings.model_validate(
                 PostgresWorkerStore(connection).read_settings()
             )
-            tasks = build_tasks(connection, settings.jobspy_results_wanted)
+            tasks = build_tasks(connection, settings.jobspy_results_wanted, secrets)
             worker = Worker(PostgresQueue(connection), worker_id, tasks.handlers())
             processed = worker.run_once()
         if args.once:
